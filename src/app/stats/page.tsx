@@ -1,6 +1,6 @@
 "use client";
 
-import { StatsScreen } from "@/app/components/StatsScreen";
+import { StatsScreen } from "@/components/StatsScreen";
 
 export default function StatsPage() {
   return <StatsScreen />;

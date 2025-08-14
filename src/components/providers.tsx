@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import { base } from "wagmi/chains";
 import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
-import { SocketProvider } from "./components/socket-provider";
+import { SocketProvider } from "./socket-provider";
 
 export function Providers(props: { children: ReactNode }) {
   return (

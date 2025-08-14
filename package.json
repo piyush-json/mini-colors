@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
     "next": "^15.3.3",
+    "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-dom": "^18",
     "react-webcam": "^7.2.0",

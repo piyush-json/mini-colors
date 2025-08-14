@@ -1,6 +1,6 @@
 "use client";
 
-import { GameHistoryScreen } from "@/app/components/GameHistoryScreen";
+import { GameHistoryScreen } from "@/components/GameHistoryScreen";
 
 export default function HistoryPage() {
   return <GameHistoryScreen />;

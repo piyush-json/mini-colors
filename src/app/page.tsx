@@ -1,6 +1,6 @@
 "use client";
 
-import { RetroButton, RetroCard } from "./components/RetroUI";
+import { RetroButton, RetroCard } from "../components/RetroUI";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -43,7 +43,9 @@ export default function HomePage() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span>90-100%</span>
-                <span className="text-green-600 font-bold">🎯 Perfect Match!</span>
+                <span className="text-green-600 font-bold">
+                  🎯 Perfect Match!
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>80-89%</span>
@@ -59,7 +61,9 @@ export default function HomePage() {
               </div>
               <div className="flex items-center justify-between">
                 <span>Below 60%</span>
-                <span className="text-orange-600 font-bold">💪 Keep Trying!</span>
+                <span className="text-orange-600 font-bold">
+                  💪 Keep Trying!
+                </span>
               </div>
             </div>
           </RetroCard>
@@ -71,8 +75,8 @@ export default function HomePage() {
               <div className="text-4xl">🌟</div>
               <h3 className="font-mono text-lg font-bold">Daily Color Hunt</h3>
               <p className="text-sm text-foreground-muted">
-                A new color every day! Challenge yourself and compete on the global leaderboard.
-                Unlimited attempts to beat your best score.
+                A new color every day! Challenge yourself and compete on the
+                global leaderboard. Unlimited attempts to beat your best score.
               </p>
               <Link href="/daily">
                 <RetroButton variant="primary" size="lg" className="w-full">
@@ -119,8 +123,8 @@ export default function HomePage() {
               <div className="text-4xl">🔮</div>
               <h3 className="font-mono text-lg font-bold">Mystery Game</h3>
               <p className="text-sm text-foreground-muted">
-                A brand new color challenge is in development!
-                Stay tuned for exciting updates and new gameplay modes.
+                A brand new color challenge is in development! Stay tuned for
+                exciting updates and new gameplay modes.
               </p>
               <RetroButton
                 onClick={() => {}}
@@ -157,7 +161,8 @@ export default function HomePage() {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-foreground-muted">
-            💡 <strong>Tip:</strong> Good lighting and a steady hand will improve your color accuracy!
+            💡 <strong>Tip:</strong> Good lighting and a steady hand will
+            improve your color accuracy!
           </p>
         </div>
       </div>

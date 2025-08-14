@@ -7,33 +7,73 @@ export interface Player {
   score: number;
   attempts: number;
   bestScore: number;
+  sessionScore: number;
+  roundScores: number[];
   joinedAt: number;
+}
+
+export interface RoundResult {
+  round: number;
+  gameType: "findColor" | "colorMixing";
+  denner: string;
+  players: Array<{
+    id: string;
+    name: string;
+    score: number;
+    attempts: number;
+  }>;
+  timestamp: number;
+}
+
+export interface SessionLeaderboard {
+  rank: number;
+  id: string;
+  name: string;
+  sessionScore: number;
+  roundScores: number[];
 }
 
 export interface GameInfo {
   roomId: string;
   hostId: string;
+  dennerName: string;
   targetColor: string;
-  gameState: "waiting" | "playing" | "finished";
+  gameState:
+    | "lobby"
+    | "gameSelection"
+    | "playing"
+    | "roundFinished"
+    | "sessionFinished";
+  gameType: "findColor" | "colorMixing" | null;
+  currentRound: number;
+  maxRounds: number;
   startTime: number | null;
   endTime: number | null;
   playerCount: number;
   maxPlayers: number;
+  minPlayers: number;
   players: Player[];
-  leaderboard: Player[];
+  roundResults: RoundResult[];
+  sessionLeaderboard: SessionLeaderboard[];
+  dennerRotation: string[];
 }
 
 export interface SocketEvent {
   type:
     | "playerJoined"
     | "playerLeft"
-    | "gameStarted"
-    | "gameFinished"
+    | "gameTypeSelected"
+    | "roundStarted"
+    | "roundFinished"
     | "scoreSubmitted"
     | "targetColorChanged"
+    | "dennerChanged"
+    | "sessionEnded"
     | "roomCreated"
+    | "roomJoined"
     | "error";
-  data: any;
+  data: unknown;
+  timestamp?: number;
 }
 
 export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
@@ -44,6 +84,11 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
   const [events, setEvents] = useState<SocketEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Add event to events list
+  const addEvent = useCallback((type: SocketEvent["type"], data: unknown) => {
+    setEvents((prev) => [...prev, { type, data, timestamp: Date.now() }]);
+  }, []);
+
   // Initialize socket connection
   useEffect(() => {
     socketRef.current = io(serverUrl, {
@@ -51,6 +96,9 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      timeout: 20000,
     });
 
     const socket = socketRef.current;
@@ -79,6 +127,12 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
       addEvent("roomCreated", { roomId, gameInfo });
     });
 
+    socket.on("roomJoined", ({ roomId, gameInfo }) => {
+      setCurrentRoom(roomId);
+      setGameInfo(gameInfo);
+      addEvent("roomJoined", { roomId, gameInfo });
+    });
+
     socket.on("roomInfo", ({ gameInfo }) => {
       setGameInfo(gameInfo);
     });
@@ -93,14 +147,29 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
       addEvent("playerLeft", { playerId, gameInfo });
     });
 
-    socket.on("gameStarted", ({ gameInfo }) => {
+    socket.on("gameTypeSelected", ({ gameType, gameInfo }) => {
       setGameInfo(gameInfo);
-      addEvent("gameStarted", { gameInfo });
+      addEvent("gameTypeSelected", { gameType, gameInfo });
     });
 
-    socket.on("gameFinished", ({ gameInfo }) => {
+    socket.on("roundStarted", ({ gameInfo }) => {
       setGameInfo(gameInfo);
-      addEvent("gameFinished", { gameInfo });
+      addEvent("roundStarted", { gameInfo });
+    });
+
+    socket.on("roundFinished", ({ gameInfo }) => {
+      setGameInfo(gameInfo);
+      addEvent("roundFinished", { gameInfo });
+    });
+
+    socket.on("dennerChanged", ({ newDenner, dennerName, gameInfo }) => {
+      setGameInfo(gameInfo);
+      addEvent("dennerChanged", { newDenner, dennerName, gameInfo });
+    });
+
+    socket.on("sessionEnded", ({ gameInfo }) => {
+      setGameInfo(gameInfo);
+      addEvent("sessionEnded", { gameInfo });
     });
 
     socket.on("scoreSubmitted", ({ playerId, score, timeTaken, gameInfo }) => {
@@ -121,7 +190,7 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     return () => {
       socket.disconnect();
     };
-  }, [serverUrl]);
+  }, [serverUrl, addEvent]);
 
   // Connect to server
   const connect = useCallback(() => {
@@ -157,11 +226,51 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     [isConnected],
   );
 
-  // Start the game (host only)
-  const startGame = useCallback(
+  // Select game type (denner only)
+  const selectGameType = useCallback(
+    (roomId: string, gameType: "findColor" | "colorMixing") => {
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit("selectGameType", { roomId, gameType });
+      }
+    },
+    [isConnected],
+  );
+
+  // Start round (denner only)
+  const startRound = useCallback(
     (roomId: string) => {
       if (socketRef.current && isConnected) {
-        socketRef.current.emit("startGame", { roomId });
+        socketRef.current.emit("startRound", { roomId });
+      }
+    },
+    [isConnected],
+  );
+
+  // End round (denner only)
+  const endRound = useCallback(
+    (roomId: string) => {
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit("endRound", { roomId });
+      }
+    },
+    [isConnected],
+  );
+
+  // Continue session (denner only)
+  const continueSession = useCallback(
+    (roomId: string) => {
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit("continueSession", { roomId });
+      }
+    },
+    [isConnected],
+  );
+
+  // End session (denner only)
+  const endSession = useCallback(
+    (roomId: string) => {
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit("endSession", { roomId });
       }
     },
     [isConnected],
@@ -177,7 +286,7 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     [isConnected],
   );
 
-  // Set custom target color (host only)
+  // Set custom target color (denner only)
   const setTargetColor = useCallback(
     (roomId: string, targetColor: string) => {
       if (socketRef.current && isConnected) {
@@ -205,11 +314,6 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
       setGameInfo(null);
     }
   }, [currentRoom]);
-
-  // Add event to events list
-  const addEvent = useCallback((type: SocketEvent["type"], data: any) => {
-    setEvents((prev) => [...prev, { type, data, timestamp: Date.now() }]);
-  }, []);
 
   // Clear events
   const clearEvents = useCallback(() => {
@@ -242,7 +346,11 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     getRoomInfo,
 
     // Game methods
-    startGame,
+    selectGameType,
+    startRound,
+    endRound,
+    continueSession,
+    endSession,
     submitScore,
     setTargetColor,
 

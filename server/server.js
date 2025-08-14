@@ -11,6 +11,10 @@ const io = socketIo(server, {
     origin: process.env.CLIENT_URL || "http://localhost:3000",
     methods: ["GET", "POST"],
   },
+  transports: ["polling", "websocket"],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 // Middleware
@@ -25,14 +29,20 @@ const playerSessions = new Map();
 class GameRoom {
   constructor(roomId, hostId, targetColor) {
     this.roomId = roomId;
-    this.hostId = hostId;
+    this.hostId = hostId; // Current denner/host
     this.targetColor = targetColor;
     this.players = new Map();
-    this.gameState = "waiting"; // waiting, playing, finished
+    this.gameState = "lobby"; // lobby, gameSelection, playing, roundFinished, sessionFinished
+    this.gameType = null; // "findColor" or "colorMixing"
+    this.currentRound = 0;
+    this.maxRounds = 3; // Configurable rounds per session
     this.startTime = null;
     this.endTime = null;
-    this.leaderboard = [];
+    this.roundResults = [];
+    this.sessionLeaderboard = [];
     this.maxPlayers = 8;
+    this.minPlayers = 2;
+    this.dennerRotation = []; // Track denner rotation
   }
 
   addPlayer(playerId, playerName) {
@@ -46,8 +56,17 @@ class GameRoom {
       score: 0,
       attempts: 0,
       bestScore: 0,
+      sessionScore: 0, // Total score across all rounds
+      roundScores: [], // Scores for each round
       joinedAt: Date.now(),
     });
+
+    // Initialize denner rotation if this is the first player
+    if (this.dennerRotation.length === 0) {
+      this.dennerRotation.push(playerId);
+    } else {
+      this.dennerRotation.push(playerId);
+    }
 
     return true;
   }
@@ -55,10 +74,15 @@ class GameRoom {
   removePlayer(playerId) {
     this.players.delete(playerId);
 
-    // If host leaves, assign new host or close room
-    if (playerId === this.hostId && this.players.size > 0) {
-      const newHost = Array.from(this.players.keys())[0];
-      this.hostId = newHost;
+    // Remove from denner rotation
+    const index = this.dennerRotation.indexOf(playerId);
+    if (index > -1) {
+      this.dennerRotation.splice(index, 1);
+    }
+
+    // If current denner leaves, assign new denner
+    if (playerId === this.hostId && this.dennerRotation.length > 0) {
+      this.hostId = this.dennerRotation[0];
     }
 
     // Close room if no players left
@@ -69,27 +93,81 @@ class GameRoom {
     return false;
   }
 
-  startGame() {
+  rotateDenner() {
+    if (this.dennerRotation.length <= 1) return;
+
+    const currentIndex = this.dennerRotation.indexOf(this.hostId);
+    const nextIndex = (currentIndex + 1) % this.dennerRotation.length;
+    this.hostId = this.dennerRotation[nextIndex];
+  }
+
+  selectGameType(gameType) {
+    if (this.gameState !== "lobby") return false;
+
+    this.gameType = gameType;
+    this.gameState = "gameSelection";
+    return true;
+  }
+
+  startRound() {
+    if (this.players.size < this.minPlayers) return false;
+
     this.gameState = "playing";
     this.startTime = Date.now();
     this.endTime = null;
+    this.currentRound++;
 
-    // Reset all player scores
+    // Reset round scores
     this.players.forEach((player) => {
       player.score = 0;
       player.attempts = 0;
-      player.bestScore = 0;
     });
+
+    return true;
   }
 
-  endGame() {
-    this.gameState = "finished";
+  endRound() {
+    this.gameState = "roundFinished";
     this.endTime = Date.now();
 
-    // Sort leaderboard by best scores
-    this.leaderboard = Array.from(this.players.values())
-      .filter((player) => player.bestScore > 0)
-      .sort((a, b) => b.bestScore - a.bestScore);
+    // Calculate round results
+    const roundResult = {
+      round: this.currentRound,
+      gameType: this.gameType,
+      denner: this.hostId,
+      players: Array.from(this.players.values()).map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        attempts: p.attempts,
+      })),
+      timestamp: this.endTime,
+    };
+
+    this.roundResults.push(roundResult);
+
+    // Update session scores
+    this.players.forEach((player) => {
+      player.sessionScore += player.score;
+      player.roundScores.push(player.score);
+    });
+
+    // Check if session should end
+    if (this.currentRound >= this.maxRounds) {
+      this.endSession();
+    }
+  }
+
+  endSession() {
+    this.gameState = "sessionFinished";
+
+    // Calculate final leaderboard
+    this.sessionLeaderboard = Array.from(this.players.values())
+      .sort((a, b) => b.sessionScore - a.sessionScore)
+      .map((player, index) => ({
+        rank: index + 1,
+        ...player,
+      }));
   }
 
   submitScore(playerId, score, timeTaken) {
@@ -97,7 +175,7 @@ class GameRoom {
     if (!player) return false;
 
     player.attempts++;
-    player.score = score;
+    player.score = Math.max(player.score, score); // Keep best score for this round
 
     if (score > player.bestScore) {
       player.bestScore = score;
@@ -110,30 +188,27 @@ class GameRoom {
     return {
       roomId: this.roomId,
       hostId: this.hostId,
+      dennerName: this.players.get(this.hostId)?.name || "Unknown",
       targetColor: this.targetColor,
       gameState: this.gameState,
+      gameType: this.gameType,
+      currentRound: this.currentRound,
+      maxRounds: this.maxRounds,
       startTime: this.startTime,
       endTime: this.endTime,
       playerCount: this.players.size,
       maxPlayers: this.maxPlayers,
+      minPlayers: this.minPlayers,
       players: Array.from(this.players.values()),
-      leaderboard: this.leaderboard,
+      roundResults: this.roundResults,
+      sessionLeaderboard: this.sessionLeaderboard,
+      dennerRotation: this.dennerRotation,
     };
   }
 }
 
 // Socket.IO event handlers
 io.on("connection", (socket) => {
-  console.log(`Player connected: ${socket.id}`);
-  console.log(`Connection details:`, {
-    id: socket.id,
-    handshake: {
-      headers: socket.handshake.headers,
-      query: socket.handshake.query,
-      auth: socket.handshake.auth,
-    },
-  });
-
   // Add error handling for the socket
   socket.on("error", (error) => {
     console.error(`Socket error for ${socket.id}:`, error);
@@ -158,8 +233,8 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (game.gameState !== "waiting") {
-      socket.emit("error", { message: "Game already in progress" });
+    if (game.gameState !== "lobby") {
+      socket.emit("error", { message: "Cannot join room - game in progress" });
       return;
     }
 
@@ -172,7 +247,13 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     playerSessions.set(socket.id, roomId);
 
-    // Notify all players in the room
+    // Send room info to the joining player first
+    socket.emit("roomJoined", {
+      roomId,
+      gameInfo: game.getGameInfo(),
+    });
+
+    // Notify all players in the room (including the one who just joined)
     io.to(roomId).emit("playerJoined", {
       playerId: socket.id,
       playerName,
@@ -201,28 +282,131 @@ io.on("connection", (socket) => {
     console.log(`Room ${roomId} created by ${playerName}`);
   });
 
-  // Start the game
-  socket.on("startGame", ({ roomId }) => {
+  // Select game type (denner only)
+  socket.on("selectGameType", ({ roomId, gameType }) => {
     const game = activeGames.get(roomId);
 
     if (!game || game.hostId !== socket.id) {
-      socket.emit("error", { message: "Only the host can start the game" });
+      socket.emit("error", { message: "Only the denner can select game type" });
       return;
     }
 
-    if (game.players.size < 2) {
-      socket.emit("error", { message: "Need at least 2 players to start" });
+    if (!["findColor", "colorMixing"].includes(gameType)) {
+      socket.emit("error", { message: "Invalid game type" });
       return;
     }
 
-    game.startGame();
+    const success = game.selectGameType(gameType);
+    if (!success) {
+      socket.emit("error", {
+        message: "Cannot select game type in current state",
+      });
+      return;
+    }
 
-    // Notify all players that game has started
-    io.to(roomId).emit("gameStarted", {
+    // Notify all players of game type selection
+    io.to(roomId).emit("gameTypeSelected", {
+      gameType,
       gameInfo: game.getGameInfo(),
     });
 
-    console.log(`Game started in room ${roomId}`);
+    console.log(`Game type ${gameType} selected in room ${roomId}`);
+  });
+
+  // Start round (denner only)
+  socket.on("startRound", ({ roomId }) => {
+    const game = activeGames.get(roomId);
+
+    if (!game || game.hostId !== socket.id) {
+      socket.emit("error", { message: "Only the denner can start the round" });
+      return;
+    }
+
+    const success = game.startRound();
+    if (!success) {
+      socket.emit("error", {
+        message: "Cannot start round - not enough players",
+      });
+      return;
+    }
+
+    // Notify all players that round has started
+    io.to(roomId).emit("roundStarted", {
+      gameInfo: game.getGameInfo(),
+    });
+
+    console.log(`Round ${game.currentRound} started in room ${roomId}`);
+  });
+
+  // End round (automatic or manual)
+  socket.on("endRound", ({ roomId }) => {
+    const game = activeGames.get(roomId);
+
+    if (!game || game.hostId !== socket.id) {
+      socket.emit("error", { message: "Only the denner can end the round" });
+      return;
+    }
+
+    game.endRound();
+
+    // Notify all players that round has ended
+    io.to(roomId).emit("roundFinished", {
+      gameInfo: game.getGameInfo(),
+    });
+
+    console.log(`Round ${game.currentRound} finished in room ${roomId}`);
+  });
+
+  // Continue to next round (denner only)
+  socket.on("continueSession", ({ roomId }) => {
+    const game = activeGames.get(roomId);
+
+    if (!game || game.hostId !== socket.id) {
+      socket.emit("error", { message: "Only the denner can continue session" });
+      return;
+    }
+
+    if (game.gameState !== "roundFinished") {
+      socket.emit("error", { message: "No round to continue from" });
+      return;
+    }
+
+    // Rotate denner
+    game.rotateDenner();
+
+    // Reset to lobby state for next round
+    game.gameState = "lobby";
+    game.gameType = null;
+
+    // Notify all players of denner change and lobby state
+    io.to(roomId).emit("dennerChanged", {
+      newDenner: game.hostId,
+      dennerName: game.players.get(game.hostId)?.name,
+      gameInfo: game.getGameInfo(),
+    });
+
+    console.log(
+      `Session continues in room ${roomId}, new denner: ${game.hostId}`,
+    );
+  });
+
+  // End session (denner only)
+  socket.on("endSession", ({ roomId }) => {
+    const game = activeGames.get(roomId);
+
+    if (!game || game.hostId !== socket.id) {
+      socket.emit("error", { message: "Only the denner can end the session" });
+      return;
+    }
+
+    game.endSession();
+
+    // Notify all players that session has ended
+    io.to(roomId).emit("sessionEnded", {
+      gameInfo: game.getGameInfo(),
+    });
+
+    console.log(`Session ended in room ${roomId}`);
   });
 
   // Submit a score
@@ -234,7 +418,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const success = game.submitScore(socket.id, score, timeTaken);
+    const success = game.submitScore(socket.id, score, timeTaken || 0);
     if (!success) {
       socket.emit("error", { message: "Player not found in game" });
       return;
@@ -244,23 +428,26 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("scoreSubmitted", {
       playerId: socket.id,
       score,
-      timeTaken,
+      timeTaken: timeTaken || 0,
       gameInfo: game.getGameInfo(),
     });
 
-    // Check if all players have submitted scores
+    // Check if all players have submitted scores (auto end round)
     const allPlayersSubmitted = Array.from(game.players.values()).every(
       (player) => player.attempts > 0,
     );
 
     if (allPlayersSubmitted) {
-      game.endGame();
-
-      io.to(roomId).emit("gameFinished", {
-        gameInfo: game.getGameInfo(),
-      });
-
-      console.log(`Game finished in room ${roomId}`);
+      // Auto end round after 2 seconds
+      setTimeout(() => {
+        game.endRound();
+        io.to(roomId).emit("roundFinished", {
+          gameInfo: game.getGameInfo(),
+        });
+        console.log(
+          `Round ${game.currentRound} auto-finished in room ${roomId}`,
+        );
+      }, 2000);
     }
   });
 

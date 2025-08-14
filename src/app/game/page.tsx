@@ -1,4 +1,4 @@
-import ColorGame from "@/app/components/ColorGame";
+import ColorGame from "@/components/ColorGame";
 
 export default function GamePage() {
   return (

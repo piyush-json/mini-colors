@@ -15,7 +15,6 @@ import { useSocket } from "./socket-provider";
 export const MultiplayerPartyScreen = () => {
   const [playerName, setPlayerName] = useState("");
   const [roomId, setRoomId] = useState("");
-  const [isHost, setIsHost] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [targetColor, setTargetColor] = useState("#ff0000");
@@ -26,6 +25,8 @@ export const MultiplayerPartyScreen = () => {
   const [score, setScore] = useState(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [webcamReady, setWebcamReady] = useState(false);
+  const [selectedGameType, setSelectedGameType] = useState<"findColor" | "colorMixing" | null>(null);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   const {
     isConnected,
@@ -38,16 +39,20 @@ export const MultiplayerPartyScreen = () => {
     createRoom,
     joinRoom,
     leaveRoom,
-    startGame,
+    selectGameType,
+    startRound,
+    endRound,
+    continueSession,
+    endSession,
     submitScore,
-    setTargetColor: setServerTargetColor,
-    clearError: clearSocketError,
   } = useSocket();
+
+  // Helper to check if current user is the denner
+  const isCurrentUserDenner = gameInfo?.hostId === gameInfo?.players.find(p => p.name === playerName)?.id;
 
   // Connect to server on component mount
   useEffect(() => {
     connect();
-    return () => disconnect();
   }, [connect, disconnect]);
 
   // Handle game state changes
@@ -79,7 +84,11 @@ export const MultiplayerPartyScreen = () => {
   // Handle socket events
   useEffect(() => {
     events.forEach((event) => {
+      console.log("Received socket event:", event.type, event.data);
       switch (event.type) {
+        case "playerJoined":
+          console.log("Player joined event received:", event.data);
+          break;
         case "gameStarted":
           setIsPlaying(true);
           setTimer(0);
@@ -89,11 +98,31 @@ export const MultiplayerPartyScreen = () => {
           setShowResult(true);
           break;
         case "error":
-          console.error("Socket error:", event.data.message);
+          console.error(
+            "Socket error:",
+            (event.data as { message: string })?.message,
+          );
           break;
       }
     });
   }, [events]);
+
+  // Debug gameInfo changes
+  useEffect(() => {
+    if (gameInfo) {
+      console.log("GameInfo updated:", {
+        roomId: gameInfo.roomId,
+        playerCount: gameInfo.playerCount,
+        players: gameInfo.players,
+        gameState: gameInfo.gameState,
+      });
+    }
+  }, [gameInfo]);
+
+  // Debug currentRoom changes
+  useEffect(() => {
+    console.log("CurrentRoom changed:", currentRoom);
+  }, [currentRoom]);
 
   const handleCreateRoom = () => {
     if (!playerName.trim()) return;
@@ -135,33 +164,29 @@ export const MultiplayerPartyScreen = () => {
     }, 1000);
   };
 
-  const handleSetCustomColor = (color: string) => {
-    setTargetColor(color);
-    if (currentRoom && isHost) {
-      setServerTargetColor(currentRoom, color);
-    }
-  };
-
   const handleUserMedia = () => {
     setCameraError(null);
     setWebcamReady(true);
   };
 
-  const handleUserMediaError = (error: any) => {
+  const handleUserMediaError = (error: string | DOMException) => {
     let message = "Camera initialization failed.";
 
-    if (error.name === "NotAllowedError") {
+    if (typeof error === "object" && error.name === "NotAllowedError") {
       message =
         "Camera access denied. Please allow camera permissions and refresh the page.";
-    } else if (error.name === "NotFoundError") {
+    } else if (typeof error === "object" && error.name === "NotFoundError") {
       message = "No camera found on this device.";
-    } else if (error.name === "NotReadableError") {
+    } else if (typeof error === "object" && error.name === "NotReadableError") {
       message =
         "Camera is in use by another application. Please close other apps using the camera.";
-    } else if (error.name === "OverconstrainedError") {
+    } else if (
+      typeof error === "object" &&
+      error.name === "OverconstrainedError"
+    ) {
       message =
         "Camera doesn't support the required resolution. Please try a different camera.";
-    } else if (error.name === "SecurityError") {
+    } else if (typeof error === "object" && error.name === "SecurityError") {
       message =
         "Camera access blocked for security reasons. Please check your browser settings.";
     }
@@ -650,12 +675,12 @@ export const MultiplayerPartyScreen = () => {
               {events.slice(-5).map((event, index) => (
                 <div key={index} className="text-sm p-2 bg-gray-50 rounded">
                   {event.type === "playerJoined" &&
-                    `👋 ${event.data.playerName} joined the room`}
+                    `👋 ${(event.data as { playerName?: string })?.playerName || "A player"} joined the room`}
                   {event.type === "playerLeft" && `👋 A player left the room`}
                   {event.type === "gameStarted" && `🚀 Game started!`}
                   {event.type === "gameFinished" && `🏁 Game finished!`}
                   {event.type === "scoreSubmitted" &&
-                    `📊 ${event.data.score}% score submitted`}
+                    `📊 ${(event.data as { score?: number })?.score || 0}% score submitted`}
                   {event.type === "targetColorChanged" &&
                     `🎨 Target color changed`}
                 </div>
