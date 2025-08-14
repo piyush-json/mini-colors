@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjExODg1NDQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgxNEI4RDMxYzgxZjU0NjgzQThEQzQ0NzI5ODlDOTlkODQwYjliQTk2In0",
+    "payload": "eyJkb21haW4iOiJjb2xvci54MmMuZnVuIn0",
+    "signature": "MHhhZWExZDE3ZDBmMWEzZjllODg2Njk0M2UwMjY3OTE5YTg4ZWIyYmQzNjUwMzM0ODZjNDk4NWUzMDgyNmM4OTI2NmM2NzUxZjBiMDc0MTliZjI4ZTAwNDc1MzBiMDM3MmVlODBkMzJlZDYyMGUzMjE2ZTE3MGIzZjM4OTIxYTY2NzFj"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Example Frame",
+    "iconUrl": "https://color.x2c.fun/icon.png",
+    "homeUrl": "https://color.x2c.fun",
+    "imageUrl": "https://color.x2c.fun/image.png",
+    "buttonTitle": "Check this out",
+    "splashImageUrl": "https://color.x2c.fun/splash.png",
+    "splashBackgroundColor": "#eeccff",
+    "webhookUrl": "https://color.x2c.fun/api/webhook"
+  }
+}
