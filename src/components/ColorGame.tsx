@@ -4,7 +4,7 @@ import { useColorGame } from "@/lib/useColorGame";
 import { ColorSDK } from "@/lib/color-sdk";
 import { useState, useEffect, useMemo } from "react";
 import { WelcomeScreen } from "./WelcomeScreen";
-import { GamePlayingScreen } from "./GamePlayingScreen";
+import { NormalGameScreen } from "./NormalGameScreen";
 import { ResultsScreen } from "./ResultsScreen";
 import { StatsScreen } from "./StatsScreen";
 import { GameHistoryScreen } from "./GameHistoryScreen";
@@ -22,12 +22,8 @@ const ColorGame = () => {
   const {
     gameState,
     lastResult,
-    timer,
     isLoading,
     error,
-    webcamReady,
-    webcamRef,
-    canvasRef,
     startGame,
     captureColor,
     resetGame,
@@ -36,12 +32,8 @@ const ColorGame = () => {
     getWorstScore,
     getTotalGames,
     getTotalPlayTime,
-    handleWebcamReady,
-    handleWebcamError,
     setNewTargetColor,
     startDailyMode,
-    showResult,
-    dailyColor,
   } = useColorGame();
 
   const [isMobile, setIsMobile] = useState(false);
@@ -144,12 +136,6 @@ const ColorGame = () => {
     return { level: "BEGINNER", color: "error" as const };
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const getAccessibilityDescription = (color: string) => {
     const colorName = ColorSDK.getColorName(color);
     const rgb = ColorSDK.hexToRgb(color);
@@ -179,35 +165,7 @@ const ColorGame = () => {
       );
 
     case "playing":
-      return (
-        <GamePlayingScreen
-          targetColor={gameState.targetColor}
-          timer={timer}
-          isLoading={isLoading}
-          onCaptureColor={handleCaptureColor}
-          onBackToMenu={handleBackToWelcome}
-          webcamRef={webcamRef}
-          canvasRef={canvasRef}
-          isMobile={isMobile}
-          getAccessibilityDescription={getAccessibilityDescription}
-          webcamReady={webcamReady}
-          handleWebcamReady={handleWebcamReady}
-          handleWebcamError={handleWebcamError}
-          onStartGame={handleStartGame}
-          practiceMode={practiceMode}
-          onPracticeMode={handlePracticeMode}
-          onShowStats={handleShowStats}
-          onShowHistory={handleShowHistory}
-          getBestScore={getBestScore}
-          getAverageScore={getAverageScore}
-          getTotalGames={getTotalGames}
-          showResult={showResult}
-          lastResult={lastResult}
-          dailyMode={gameState.dailyMode}
-          attempts={gameState.attempts}
-          bestScore={gameState.bestScore}
-        />
-      );
+      return <NormalGameScreen />;
 
     case "results":
       if (!lastResult) return null;
@@ -227,7 +185,17 @@ const ColorGame = () => {
       );
 
     case "stats":
-      return <StatsScreen />;
+      return (
+        <StatsScreen
+          onBackToMenu={handleBackToWelcome}
+          getAverageScore={getAverageScore}
+          getBestScore={getBestScore}
+          getWorstScore={getWorstScore}
+          getTotalGames={getTotalGames}
+          getTotalPlayTime={getTotalPlayTime}
+          onShowHistory={handleShowHistory}
+        />
+      );
 
     case "history":
       return <GameHistoryScreen />;
@@ -336,8 +304,8 @@ const ColorGame = () => {
                 color recognition skills.
               </p>
               <p>
-                🎯 Click "Start Practice Game" to begin, then "Capture Color" to
-                simulate finding the target color.
+                🎯 Click &quot;Start Practice Game&quot; to begin, then
+                &quot;Capture Color&quot; to simulate finding the target color.
               </p>
             </div>
           </div>

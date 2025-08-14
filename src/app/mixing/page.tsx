@@ -1,7 +1,7 @@
 "use client";
 
-import { ColorMixingScreen } from "@/components/ColorMixingScreen";
+import { ColorMixingGame } from "@/components/ColorMixingGame";
 
 export default function ColorMixingPage() {
-  return <ColorMixingScreen />;
+  return <ColorMixingGame />;
 }

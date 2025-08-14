@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "./theme.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Color Hunter - Daily Color Challenge",
-  description: "Hunt for colors in this daily challenge game!",
+  title: "COLOR HUNTER - BRUTALIST EDITION",
+  description: "BRUTAL COLOR PERCEPTION TRAINING SYSTEM - NO BULLSHIT",
 };
 
 export default function RootLayout({
@@ -14,8 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="dark">
+      <body className="font-mono bg-background text-foreground">
         <Providers>{children}</Providers>
       </body>
     </html>

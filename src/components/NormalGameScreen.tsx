@@ -12,9 +12,9 @@ import { Badge } from "./ui/badge";
 import Webcam from "react-webcam";
 import { useState, useEffect } from "react";
 import { useColorGame } from "@/lib/useColorGame";
-import { DailyLeaderboard } from "./DailyLeaderboard";
+import { ColorSDK } from "@/lib/color-sdk";
 
-export const DailyChallengeScreen = () => {
+export const NormalGameScreen = () => {
   const {
     gameState,
     lastResult,
@@ -24,24 +24,23 @@ export const DailyChallengeScreen = () => {
     webcamReady,
     webcamRef,
     canvasRef,
+    startGame,
     captureColor,
     resetGame,
     handleWebcamReady,
     handleWebcamError,
-    startDailyMode,
     showResult,
-    dailyColor,
+    setNewTargetColor,
+    getAverageScore,
+    getBestScore,
+    getTotalGames,
   } = useColorGame();
 
   const [isMobile, setIsMobile] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [dailyColorInfo, setDailyColorInfo] = useState<{
-    color: string;
-    date: string;
-  } | null>(null);
-  const [hasPlayed, setHasPlayed] = useState(false);
-  const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [currentScore, setCurrentScore] = useState(0);
+  const [attempts, setAttempts] = useState(0);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   // Mobile detection
   useEffect(() => {
@@ -51,129 +50,115 @@ export const DailyChallengeScreen = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Fetch daily color
+  // Initialize with random color
   useEffect(() => {
-    const fetchDailyColor = async () => {
-      try {
-        const response = await fetch("/api/daily");
-        if (response.ok) {
-          const data = await response.json();
-          setDailyColorInfo(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch daily color:", error);
-      }
+    const generateNewColor = () => {
+      const newColor = ColorSDK.generateRandomColor();
+      setNewTargetColor(newColor);
     };
+    generateNewColor();
+  }, [setNewTargetColor]);
 
-    fetchDailyColor();
-  }, []);
-
-  // Start daily mode when daily color is available
+  // Update score when result changes
   useEffect(() => {
-    if (dailyColorInfo) {
-      startDailyMode();
+    if (lastResult) {
+      setCurrentScore(lastResult.finalScore);
+      setAttempts((prev) => prev + 1);
     }
-  }, [dailyColorInfo, startDailyMode]);
-
-  // Track when game completes
-  useEffect(() => {
-    if (lastResult && !hasPlayed) {
-      setHasPlayed(true);
-      setFinalScore(lastResult.finalScore);
-    }
-  }, [lastResult, hasPlayed]);
+  }, [lastResult]);
 
   const formatTime = (seconds: number) => {
     return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
+  };
+
+  const generateNewColor = () => {
+    const newColor = ColorSDK.generateRandomColor();
+    setNewTargetColor(newColor);
   };
 
   const handleBackToMenu = () => {
     window.location.href = "/";
   };
 
-  const handlePlayAgain = () => {
-    setHasPlayed(false);
-    setFinalScore(null);
+  const handleNewGame = () => {
     resetGame();
-    startDailyMode();
+    generateNewColor();
+    startGame();
   };
 
-  const handleShowLeaderboard = () => {
-    setShowLeaderboard(true);
-  };
-
-  const handleCloseLeaderboard = () => {
-    setShowLeaderboard(false);
-  };
-
-  const handleSubmitScore = (name: string) => {
-    // Score submitted successfully
-    console.log(`Score submitted for ${name}: ${finalScore}`);
+  const handleCaptureAndNewColor = () => {
+    captureColor();
+    // Generate new color for next attempt
+    setTimeout(() => {
+      generateNewColor();
+    }, 100);
   };
 
   const getAccessibilityDescription = (color: string) => {
-    // Simple color description for accessibility
-    return `Color: ${color}`;
+    const colorName = ColorSDK.getColorName(color);
+    const rgb = ColorSDK.hexToRgb(color);
+    return `${colorName} color (${rgb})`;
   };
 
-  if (showLeaderboard) {
-    return (
-      <DailyLeaderboard
-        onClose={handleCloseLeaderboard}
-        currentDate={
-          dailyColorInfo?.date || new Date().toISOString().split("T")[0]
-        }
-        currentScore={finalScore || undefined}
-        onSubmitScore={handleSubmitScore}
-      />
-    );
-  }
+  const getScoreCategory = (score: number) => {
+    if (score >= 90) return { text: "PERFECT", variant: "success" as const };
+    if (score >= 80) return { text: "EXCELLENT", variant: "success" as const };
+    if (score >= 70) return { text: "GREAT", variant: "accent" as const };
+    if (score >= 60) return { text: "GOOD", variant: "secondary" as const };
+    if (score >= 40) return { text: "OKAY", variant: "warning" as const };
+    return { text: "KEEP TRYING", variant: "destructive" as const };
+  };
 
-  // Results screen
+  // Results screen after each capture
   if (lastResult && showResult) {
+    const scoreCategory = getScoreCategory(lastResult.finalScore);
+
     return (
       <div className="min-h-screen bg-background p-4 font-mono">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
-              🏆 DAILY
+              🎯 RESULT
               <br />
-              <span className="text-accent">COMPLETE</span>
+              <span className="text-accent">#{attempts}</span>
             </h1>
-            <Badge variant="accent" className="text-xl px-8 py-3">
-              TODAY&apos;S CHALLENGE DESTROYED
+            <Badge
+              variant={scoreCategory.variant}
+              className="text-xl px-8 py-3"
+            >
+              {scoreCategory.text}
             </Badge>
           </div>
 
           {/* Score Display */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>💀 DESTRUCTION RESULTS</CardTitle>
-              <CardDescription>YOUR DAILY CARNAGE REPORT</CardDescription>
+              <CardTitle>💥 SCORE BREAKDOWN</CardTitle>
+              <CardDescription>YOUR COLOR HUNTING RESULTS</CardDescription>
             </CardHeader>
             <CardContent className="text-center space-y-6">
               <div className="p-8 border-4 border-foreground bg-muted">
                 <div className="font-black text-8xl uppercase tracking-tighter leading-none mb-4">
                   {lastResult.finalScore}
                 </div>
-                <Badge variant="success" className="text-2xl px-8 py-3">
-                  DESTRUCTION POINTS
+                <Badge variant="accent" className="text-2xl px-8 py-3">
+                  ACCURACY POINTS
                 </Badge>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 border-2 border-foreground">
                   <div className="font-black text-2xl">
-                    {lastResult.similarity.toFixed(1)}%
+                    {lastResult.similarity?.toFixed(1) || 0}%
                   </div>
                   <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
-                    ACCURACY
+                    COLOR MATCH
                   </div>
                 </div>
                 <div className="p-4 border-2 border-foreground">
                   <div className="font-black text-2xl">
-                    {lastResult.timeScore}
+                    {lastResult.timeScore || 0}
                   </div>
                   <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
                     TIME BONUS
@@ -181,7 +166,7 @@ export const DailyChallengeScreen = () => {
                 </div>
                 <div className="p-4 border-2 border-foreground">
                   <div className="font-black text-2xl">
-                    {lastResult.timeTaken.toFixed(1)}s
+                    {lastResult.timeTaken?.toFixed(1) || 0}s
                   </div>
                   <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
                     TIME TAKEN
@@ -194,8 +179,8 @@ export const DailyChallengeScreen = () => {
           {/* Color Comparison */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>🎨 COLOR ANNIHILATION</CardTitle>
-              <CardDescription>TARGET VS CAPTURED DESTRUCTION</CardDescription>
+              <CardTitle>🎨 COLOR COMPARISON</CardTitle>
+              <CardDescription>TARGET VS CAPTURED</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -228,21 +213,24 @@ export const DailyChallengeScreen = () => {
           {/* Actions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button
-              onClick={handleShowLeaderboard}
+              onClick={() => {
+                generateNewColor();
+                startGame();
+              }}
               variant="accent"
               size="lg"
               className="text-xl"
             >
-              🏆 VIEW LEADERBOARD
+              🎲 NEW COLOR
             </Button>
 
             <Button
-              onClick={handlePlayAgain}
+              onClick={handleNewGame}
               variant="secondary"
               size="lg"
               className="text-xl"
             >
-              🔄 PLAY AGAIN
+              🔄 RESTART
             </Button>
 
             <Button
@@ -266,22 +254,15 @@ export const DailyChallengeScreen = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
-            📅 DAILY
+            🎮 COLOR
             <br />
-            <span className="text-secondary">CHALLENGE</span>
+            <span className="text-accent">HUNTER</span>
           </h1>
           <p className="font-black text-xl uppercase tracking-wide text-muted-foreground mb-4">
-            {dailyColorInfo?.date
-              ? new Date(dailyColorInfo.date).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "LOADING DATE..."}
+            ENDLESS RANDOM COLOR CHALLENGE
           </p>
-          <Badge variant="secondary" className="text-lg px-6 py-2">
-            ONE CHANCE FOR GLORY
+          <Badge variant="accent" className="text-lg px-6 py-2">
+            NEW COLOR EVERY ATTEMPT
           </Badge>
         </div>
 
@@ -291,9 +272,12 @@ export const DailyChallengeScreen = () => {
             ← BACK TO MENU
           </Button>
 
-          <Button onClick={handleShowLeaderboard} variant="ghost" size="sm">
-            🏆 LEADERBOARD
-          </Button>
+          {/* Stats */}
+          <div className="flex space-x-2">
+            <Badge variant="outline">BEST: {getBestScore()}</Badge>
+            <Badge variant="outline">AVG: {getAverageScore()}</Badge>
+            <Badge variant="outline">GAMES: {getTotalGames()}</Badge>
+          </div>
 
           {/* Timer */}
           <Card className="inline-block">
@@ -331,40 +315,85 @@ export const DailyChallengeScreen = () => {
           {/* Target Color */}
           <Card>
             <CardHeader>
-              <CardTitle>🎯 TODAY&apos;S TARGET</CardTitle>
-              <CardDescription>DESTROY THIS EXACT COLOR</CardDescription>
+              <CardTitle>🎯 RANDOM TARGET</CardTitle>
+              <CardDescription>HUNT THIS COLOR NOW</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="relative">
                 <div
                   className="w-full h-64 border-8 border-foreground shadow-[16px_16px_0px_hsl(var(--foreground))]"
                   style={{
-                    backgroundColor:
-                      dailyColor || dailyColorInfo?.color || "#000000",
+                    backgroundColor: gameState.targetColor || "#ff0000",
                   }}
                 />
                 <div className="absolute top-4 right-4">
                   <Badge variant="outline" className="bg-background/90">
-                    {dailyColor || dailyColorInfo?.color || "LOADING..."}
+                    {gameState.targetColor || "LOADING..."}
                   </Badge>
                 </div>
               </div>
 
               <div className="p-4 bg-muted border-4 border-foreground">
                 <div className="font-black text-sm uppercase tracking-wide mb-2">
-                  TARGET DESCRIPTION:
+                  COLOR DESCRIPTION:
                 </div>
                 <div className="font-mono text-sm">
-                  {dailyColor
-                    ? getAccessibilityDescription(dailyColor)
+                  {gameState.targetColor
+                    ? getAccessibilityDescription(gameState.targetColor)
                     : "Loading color info..."}
                 </div>
               </div>
 
-              <div className="text-center">
-                <Badge variant="warning" className="text-lg px-6 py-2">
-                  ⚠️ ONE ATTEMPT ONLY
-                </Badge>
+              {/* Instructions */}
+              <div className="space-y-3">
+                <Button
+                  onClick={() => setShowInstructions(!showInstructions)}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                >
+                  {showInstructions ? "HIDE" : "SHOW"} INSTRUCTIONS
+                </Button>
+
+                {showInstructions && (
+                  <div className="space-y-2 font-bold text-xs uppercase tracking-wide p-4 bg-muted border-2 border-foreground">
+                    <div className="flex items-start space-x-2">
+                      <span className="text-accent">1.</span>
+                      <span>POINT CAMERA AT TARGET COLOR</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-accent">2.</span>
+                      <span>CAPTURE WHEN YOU FIND IT</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-accent">3.</span>
+                      <span>GET NEW RANDOM COLOR</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-accent">4.</span>
+                      <span>REPEAT ENDLESSLY!</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  onClick={generateNewColor}
+                  variant="secondary"
+                  size="sm"
+                  className="text-sm"
+                >
+                  🎲 NEW COLOR
+                </Button>
+                <Button
+                  onClick={handleNewGame}
+                  variant="outline"
+                  size="sm"
+                  className="text-sm"
+                >
+                  🔄 RESTART
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -372,8 +401,8 @@ export const DailyChallengeScreen = () => {
           {/* Camera Feed */}
           <Card>
             <CardHeader>
-              <CardTitle>📹 DESTRUCTION CAMERA</CardTitle>
-              <CardDescription>FIND AND DESTROY THE TARGET</CardDescription>
+              <CardTitle>📹 HUNTING CAMERA</CardTitle>
+              <CardDescription>FIND THE RANDOM TARGET</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="relative">
@@ -402,7 +431,7 @@ export const DailyChallengeScreen = () => {
                           CAMERA INITIALIZING...
                         </div>
                         <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
-                          ALLOW CAMERA ACCESS FOR DESTRUCTION
+                          ALLOW CAMERA ACCESS
                         </div>
                       </div>
                     </div>
@@ -410,7 +439,7 @@ export const DailyChallengeScreen = () => {
 
                   {/* Targeting crosshair */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-16 h-16 border-8 border-destructive">
+                    <div className="w-16 h-16 border-8 border-accent animate-pulse">
                       <div className="w-full h-full border-4 border-background"></div>
                     </div>
                   </div>
@@ -419,17 +448,37 @@ export const DailyChallengeScreen = () => {
                 {/* Capture Button */}
                 <div className="mt-8 text-center">
                   <Button
-                    onClick={captureColor}
+                    onClick={handleCaptureAndNewColor}
                     disabled={!webcamReady || isLoading || !gameState.isPlaying}
-                    variant="destructive"
+                    variant="accent"
                     size="lg"
                     className="text-2xl px-16 py-8"
                   >
-                    {isLoading
-                      ? "ANALYZING DESTRUCTION..."
-                      : "💀 CAPTURE & DESTROY"}
+                    {isLoading ? "ANALYZING..." : "🎯 CAPTURE & HUNT NEXT"}
                   </Button>
                 </div>
+
+                {/* Game Status */}
+                {gameState.isPlaying ? (
+                  <div className="mt-4 text-center">
+                    <Badge variant="success" className="text-lg px-6 py-2">
+                      ✅ HUNTING IN PROGRESS
+                    </Badge>
+                  </div>
+                ) : (
+                  <div className="mt-4 text-center">
+                    <Button
+                      onClick={() => {
+                        generateNewColor();
+                        startGame();
+                      }}
+                      variant="secondary"
+                      size="lg"
+                    >
+                      🚀 START HUNTING
+                    </Button>
+                  </div>
+                )}
 
                 {/* Hidden canvas for color analysis */}
                 <canvas
@@ -442,6 +491,42 @@ export const DailyChallengeScreen = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Session Stats */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>📊 SESSION STATS</CardTitle>
+            <CardDescription>YOUR HUNTING PERFORMANCE</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 border-2 border-foreground">
+                <div className="font-black text-3xl">{attempts}</div>
+                <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                  ATTEMPTS
+                </div>
+              </div>
+              <div className="text-center p-4 border-2 border-foreground">
+                <div className="font-black text-3xl">{currentScore}</div>
+                <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                  LAST SCORE
+                </div>
+              </div>
+              <div className="text-center p-4 border-2 border-foreground">
+                <div className="font-black text-3xl">{getBestScore()}</div>
+                <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                  BEST EVER
+                </div>
+              </div>
+              <div className="text-center p-4 border-2 border-foreground">
+                <div className="font-black text-3xl">{getAverageScore()}</div>
+                <div className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                  AVERAGE
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -2,24 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #111111;
-}
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap");
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #111111;
-    --foreground: #ffffff;
+    /* HYPER BRUTALIST Color Palette - MAXIMUM CONTRAST */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 95%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 95%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 100% 50%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 85%;
+    --muted-foreground: 0 0% 0%;
+    --accent: 300 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 120 100% 25%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 100% 50%;
+    --warning-foreground: 0 0% 0%;
+    --info: 200 100% 50%;
+    --info-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 0%;
+    --radius: 0rem; /* ZERO BORDER RADIUS */
+
+    /* HYPER BRUTALIST specific variables */
+    --brutal-shadow: 16px 16px 0px;
+    --brutal-border: 8px;
+    --brutal-shadow-lg: 24px 24px 0px;
+    --brutal-border-lg: 12px;
+  }
+
+  .dark {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 45 100% 60%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 75%;
+    --accent: 280 100% 70%;
+    --accent-foreground: 0 0% 8%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 95%;
+    --success: 120 100% 40%;
+    --success-foreground: 0 0% 8%;
+    --warning: 45 100% 60%;
+    --warning-foreground: 0 0% 8%;
+    --info: 200 100% 50%;
+    --info-foreground: 0 0% 8%;
+    --border: 0 0% 95%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 95%;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: "Geist", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
-  font-size: 80%;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 800;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  /* Brutalist Button Styles */
+  .btn-brutal {
+    @apply font-mono font-bold uppercase tracking-wider;
+    @apply border-4 border-black bg-white text-black;
+    @apply transform transition-all duration-75;
+    @apply hover:translate-x-1 hover:translate-y-1;
+    box-shadow: var(--brutal-shadow) hsl(var(--foreground));
+    border-radius: 0;
+  }
+
+  .btn-brutal:hover {
+    box-shadow: 4px 4px 0px hsl(var(--foreground));
+  }
+
+  .btn-brutal:active {
+    @apply translate-x-2 translate-y-2;
+    box-shadow: 0px 0px 0px hsl(var(--foreground));
+  }
+
+  .btn-brutal-primary {
+    @apply btn-brutal bg-primary text-primary-foreground border-primary;
+  }
+
+  .btn-brutal-secondary {
+    @apply btn-brutal bg-secondary text-secondary-foreground border-secondary;
+  }
+
+  .btn-brutal-accent {
+    @apply btn-brutal bg-accent text-accent-foreground border-accent;
+  }
+
+  .btn-brutal-destructive {
+    @apply btn-brutal bg-destructive text-destructive-foreground border-destructive;
+  }
+
+  .btn-brutal-success {
+    @apply btn-brutal bg-success text-success-foreground border-success;
+  }
+
+  /* Brutalist Card Styles */
+  .card-brutal {
+    @apply border-4 border-foreground bg-card text-card-foreground;
+    @apply p-6;
+    box-shadow: var(--brutal-shadow) hsl(var(--foreground));
+    border-radius: 0;
+  }
+
+  /* Brutalist Input Styles */
+  .input-brutal {
+    @apply border-4 border-foreground bg-input text-foreground;
+    @apply p-3 font-mono font-bold;
+    @apply focus:outline-none focus:ring-0;
+    @apply focus:translate-x-1 focus:translate-y-1;
+    box-shadow: 4px 4px 0px hsl(var(--foreground));
+    border-radius: 0;
+    transition: all 75ms ease;
+  }
+
+  .input-brutal:focus {
+    box-shadow: 2px 2px 0px hsl(var(--foreground));
+  }
+
+  /* Brutalist Typography */
+  .text-brutal-title {
+    @apply text-4xl md:text-6xl lg:text-8xl font-black uppercase;
+    @apply tracking-tighter leading-none;
+    text-shadow: 4px 4px 0px hsl(var(--foreground));
+  }
+
+  .text-brutal-heading {
+    @apply text-2xl md:text-4xl font-black uppercase;
+    @apply tracking-tight leading-none;
+  }
+
+  .text-brutal-body {
+    @apply font-mono font-bold uppercase text-sm tracking-wide;
+  }
 }

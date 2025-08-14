@@ -1,10 +1,6 @@
-import {
-  RetroButton,
-  RetroCard,
-  RetroColorSwatch,
-  RetroProgressBar,
-  RetroBadge,
-} from "./RetroUI";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
 import { ColorSDK } from "@/lib/color-sdk";
 
 interface ColorMatch {
@@ -41,123 +37,194 @@ export const ResultsScreen = ({
   getDifficultyLevel,
   getAccessibilityDescription,
 }: ResultsScreenProps) => {
+  const scoreLevel = getDifficultyLevel(lastResult.finalScore);
+  const formatTime = (seconds: number) => {
+    return `${seconds.toFixed(1)}s`;
+  };
+
+  const getScoreEmoji = (score: number) => {
+    if (score >= 90) return "🏆";
+    if (score >= 80) return "🥇";
+    if (score >= 70) return "🥈";
+    if (score >= 60) return "🥉";
+    return "💀";
+  };
+
+  const getScoreVariant = (score: number) => {
+    if (score >= 90) return "success";
+    if (score >= 70) return "secondary";
+    if (score >= 50) return "warning";
+    return "destructive";
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-4">
+    <div className="min-h-screen bg-background p-4 font-mono">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="font-mono text-3xl md:text-4xl font-bold text-foreground mb-2">
-            🎉 Game Results!
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+            {getScoreEmoji(lastResult.finalScore)} RESULTS
           </h1>
-          <p className="font-mono text-lg text-foreground-muted">
-            Here's how you did on your color hunt
-          </p>
+          <Badge 
+            variant={getScoreVariant(lastResult.finalScore) as any}
+            className="text-2xl px-8 py-3"
+          >
+            {getScoreMessage(lastResult.finalScore)}
+          </Badge>
         </div>
 
-        <RetroCard className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="text-center">
-              <div className="font-mono text-lg font-bold mb-2">
-                Target Color
+        {/* Main Results Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Score Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>📊 SCORE BREAKDOWN</CardTitle>
+              <CardDescription>PERFORMANCE ANALYSIS</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Final Score */}
+              <div className="text-center p-6 border-4 border-foreground bg-muted">
+                <div className="font-black text-6xl uppercase tracking-tighter leading-none mb-2">
+                  {lastResult.finalScore}
+                </div>
+                <div className="font-bold text-lg uppercase tracking-wide">
+                  FINAL SCORE
+                </div>
               </div>
-              <RetroColorSwatch
-                color={lastResult.targetColor}
-                size="md"
-                showHex
-              />
-              <div className="mt-2 font-mono text-sm">
-                {ColorSDK.getColorName(lastResult.targetColor)}
-              </div>
-            </div>
 
-            <div className="text-center">
-              <div className="font-mono text-lg font-bold mb-2">Your Color</div>
-              <RetroColorSwatch
-                color={lastResult.capturedColor}
-                size="md"
-                showHex
-              />
-              <div className="mt-2 font-mono text-sm">
-                {ColorSDK.getColorName(lastResult.capturedColor)}
+              {/* Detailed Metrics */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 border-2 border-foreground">
+                  <span className="font-bold uppercase tracking-wide">COLOR ACCURACY:</span>
+                  <Badge variant="outline">{lastResult.similarity.toFixed(1)}%</Badge>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 border-2 border-foreground">
+                  <span className="font-bold uppercase tracking-wide">TIME BONUS:</span>
+                  <Badge variant="outline">{lastResult.timeScore}</Badge>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 border-2 border-foreground">
+                  <span className="font-bold uppercase tracking-wide">TIME TAKEN:</span>
+                  <Badge variant="outline">{formatTime(lastResult.timeTaken)}</Badge>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 border-2 border-foreground">
+                  <span className="font-bold uppercase tracking-wide">SKILL LEVEL:</span>
+                  <Badge variant="accent">{scoreLevel.level}</Badge>
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="text-center">
-              <div className="font-mono text-lg font-bold mb-2">
-                Final Score
+          {/* Color Comparison */}
+          <Card>
+            <CardHeader>
+              <CardTitle>🎨 COLOR COMPARISON</CardTitle>
+              <CardDescription>TARGET VS CAPTURED</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Target Color */}
+              <div>
+                <div className="font-bold text-sm uppercase tracking-wide mb-2">
+                  TARGET COLOR:
+                </div>
+                <div className="relative">
+                  <div
+                    className="w-full h-24 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                    style={{ backgroundColor: lastResult.targetColor }}
+                  />
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="outline" className="bg-background/90 text-xs">
+                      {lastResult.targetColor}
+                    </Badge>
+                  </div>
+                </div>
               </div>
-              <div
-                className={`text-4xl font-mono font-bold ${getScoreColor(lastResult.finalScore)}`}
-              >
-                {lastResult.finalScore}
-              </div>
-              <div className="mt-2 font-mono text-sm text-foreground-muted">
-                {getScoreMessage(lastResult.finalScore)}
-              </div>
-              <div className="mt-2">
-                <RetroBadge
-                  variant={
-                    getDifficultyLevel(lastResult.finalScore).color as any
-                  }
-                >
-                  {getDifficultyLevel(lastResult.finalScore).level}
-                </RetroBadge>
-              </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <div className="font-mono text-sm font-bold mb-2">
-                Color Accuracy
+              {/* Captured Color */}
+              <div>
+                <div className="font-bold text-sm uppercase tracking-wide mb-2">
+                  CAPTURED COLOR:
+                </div>
+                <div className="relative">
+                  <div
+                    className="w-full h-24 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                    style={{ backgroundColor: lastResult.capturedColor }}
+                  />
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="outline" className="bg-background/90 text-xs">
+                      {lastResult.capturedColor}
+                    </Badge>
+                  </div>
+                </div>
               </div>
-              <RetroProgressBar
-                value={100 - lastResult.similarity}
-                max={100}
-                label={`Similarity: ${100 - lastResult.similarity}% (Difference: ${lastResult.similarity}%)`}
-              />
-            </div>
-            <div>
-              <div className="font-mono text-sm font-bold mb-2">
-                Speed Bonus
+
+              {/* Color Difference Analysis */}
+              <div className="p-4 bg-muted border-2 border-foreground">
+                <div className="font-bold text-sm uppercase tracking-wide mb-2">
+                  ANALYSIS:
+                </div>
+                <div className="font-mono text-sm">
+                  Target: {getAccessibilityDescription(lastResult.targetColor)}
+                </div>
+                <div className="font-mono text-sm mt-1">
+                  Captured: {getAccessibilityDescription(lastResult.capturedColor)}
+                </div>
               </div>
-              <RetroProgressBar
-                value={lastResult.timeScore}
-                max={30}
-                label={`Time: ${lastResult.timeTaken}s`}
-              />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <RetroButton
-              onClick={onPlayAgain}
-              variant="primary"
-              size="lg"
-              className="flex-1"
-            >
-              🎮 PLAY AGAIN
-            </RetroButton>
-            <RetroButton
-              onClick={onResetGame}
-              variant="secondary"
-              size="lg"
-              className="flex-1"
-            >
-              🔄 RESET GAME
-            </RetroButton>
-          </div>
-        </RetroCard>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Button
+            onClick={onPlayAgain}
+            variant="accent"
+            size="lg"
+            className="w-full"
+          >
+            🎯 PLAY AGAIN
+          </Button>
+          
+          <Button
+            onClick={onResetGame}
+            variant="secondary"
+            size="lg"
+            className="w-full"
+          >
+            🔄 NEW GAME
+          </Button>
+          
+          <Button
+            onClick={onShowStats}
+            variant="outline"
+            size="lg"
+            className="w-full"
+          >
+            📊 VIEW STATS
+          </Button>
+          
+          <Button
+            onClick={onShowHistory}
+            variant="outline"
+            size="lg"
+            className="w-full"
+          >
+            📜 HISTORY
+          </Button>
+        </div>
 
-        <div className="text-center space-x-4">
-          <RetroButton onClick={onShowStats} variant="secondary" size="md">
-            📊 View Statistics
-          </RetroButton>
-          <RetroButton onClick={onShowHistory} variant="secondary" size="md">
-            📜 Game History
-          </RetroButton>
-          <RetroButton onClick={onBackToMenu} variant="secondary" size="md">
-            ← Back to Menu
-          </RetroButton>
+        {/* Back to Menu */}
+        <div className="text-center">
+          <Button
+            onClick={onBackToMenu}
+            variant="ghost"
+            size="lg"
+            className="font-black text-xl uppercase tracking-wider"
+          >
+            ← BACK TO MENU
+          </Button>
         </div>
       </div>
     </div>

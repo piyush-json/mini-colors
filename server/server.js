@@ -50,18 +50,31 @@ class GameRoom {
       return false;
     }
 
+    // Calculate initial session score based on current round if joining mid-game
+    let initialSessionScore = 0;
+    let initialRoundScores = [];
+
+    // If joining during an active session, give them 0 for completed rounds
+    if (this.currentRound > 0) {
+      for (let i = 0; i < this.currentRound - 1; i++) {
+        initialRoundScores.push(0);
+      }
+    }
+
     this.players.set(playerId, {
       id: playerId,
       name: playerName,
       score: 0,
       attempts: 0,
       bestScore: 0,
-      sessionScore: 0, // Total score across all rounds
-      roundScores: [], // Scores for each round
+      sessionScore: initialSessionScore,
+      roundScores: initialRoundScores,
       joinedAt: Date.now(),
+      joinedDuringRound:
+        this.gameState === "playing" ? this.currentRound : null,
     });
 
-    // Initialize denner rotation if this is the first player
+    // Add to denner rotation
     if (this.dennerRotation.length === 0) {
       this.dennerRotation.push(playerId);
     } else {
@@ -140,6 +153,7 @@ class GameRoom {
         name: p.name,
         score: p.score,
         attempts: p.attempts,
+        joinedDuringRound: p.joinedDuringRound === this.currentRound,
       })),
       timestamp: this.endTime,
     };
@@ -150,6 +164,10 @@ class GameRoom {
     this.players.forEach((player) => {
       player.sessionScore += player.score;
       player.roundScores.push(player.score);
+      // Clear the joinedDuringRound flag after round ends
+      if (player.joinedDuringRound !== null) {
+        player.joinedDuringRound = null;
+      }
     });
 
     // Check if session should end
@@ -176,6 +194,7 @@ class GameRoom {
 
     player.attempts++;
     player.score = Math.max(player.score, score); // Keep best score for this round
+    player.lastTimeTaken = timeTaken || 0; // Store the time taken for this attempt
 
     if (score > player.bestScore) {
       player.bestScore = score;
@@ -233,11 +252,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (game.gameState !== "lobby") {
-      socket.emit("error", { message: "Cannot join room - game in progress" });
-      return;
-    }
-
+    // Allow joining at any time during the game
     const success = game.addPlayer(socket.id, playerName);
     if (!success) {
       socket.emit("error", { message: "Room is full" });
@@ -251,6 +266,7 @@ io.on("connection", (socket) => {
     socket.emit("roomJoined", {
       roomId,
       gameInfo: game.getGameInfo(),
+      joinedDuringGame: game.gameState !== "lobby", // Let client know they joined mid-game
     });
 
     // Notify all players in the room (including the one who just joined)
@@ -258,9 +274,12 @@ io.on("connection", (socket) => {
       playerId: socket.id,
       playerName,
       gameInfo: game.getGameInfo(),
+      joinedDuringGame: game.gameState !== "lobby",
     });
 
-    console.log(`Player ${playerName} joined room ${roomId}`);
+    console.log(
+      `Player ${playerName} joined room ${roomId} (state: ${game.gameState})`,
+    );
   });
 
   // Create a new game room
@@ -432,12 +451,17 @@ io.on("connection", (socket) => {
       gameInfo: game.getGameInfo(),
     });
 
-    // Check if all players have submitted scores (auto end round)
-    const allPlayersSubmitted = Array.from(game.players.values()).every(
-      (player) => player.attempts > 0,
+    // Check if all eligible players have submitted scores (auto end round)
+    // Players who joined during the current round are not required to submit
+    const eligiblePlayers = Array.from(game.players.values()).filter(
+      (player) => player.joinedDuringRound !== game.currentRound,
     );
 
-    if (allPlayersSubmitted) {
+    const allEligiblePlayersSubmitted =
+      eligiblePlayers.length === 0 ||
+      eligiblePlayers.every((player) => player.attempts > 0);
+
+    if (allEligiblePlayersSubmitted && eligiblePlayers.length > 0) {
       // Auto end round after 2 seconds
       setTimeout(() => {
         game.endRound();

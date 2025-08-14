@@ -1,4 +1,12 @@
-import { RetroButton, RetroCard } from "./RetroUI";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
@@ -20,180 +28,219 @@ export const WelcomeScreen = ({
   error,
 }: WelcomeScreenProps) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="font-mono text-4xl md:text-6xl font-bold text-foreground mb-4">
-            🎨 Color Hunter
+    <div className="min-h-screen bg-background p-4 font-mono">
+      <div className="max-w-6xl mx-auto">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <h1 className="font-black text-8xl md:text-9xl lg:text-[12rem] uppercase tracking-tighter leading-none mb-8 text-foreground transform hover:scale-105 transition-transform duration-300">
+            COLOR
+            <br />
+            <span className="text-accent animate-pulse">HUNTER</span>
           </h1>
-          <p className="font-mono text-xl text-foreground-muted max-w-2xl mx-auto">
-            Test your color perception skills! Choose from 4 exciting mini-games
-            to challenge your color matching abilities.
-          </p>
+          <div className="max-w-4xl mx-auto mb-12">
+            <p className="font-black text-2xl md:text-3xl uppercase tracking-wide text-muted-foreground leading-tight">
+              HYPER BRUTALIST COLOR PERCEPTION DESTRUCTION SYSTEM
+            </p>
+          </div>
+          <Badge
+            variant="accent"
+            className="text-2xl px-12 py-4 shadow-[16px_16px_0px_hsl(var(--foreground))]"
+          >
+            🎯 MAXIMUM DIFFICULTY MODE
+          </Badge>
         </div>
 
+        {/* Error Display */}
         {error && (
-          <RetroCard title="⚠️ Error" className="mb-6">
-            <div className="text-center">
-              <p className="text-red-600 mb-4">{error}</p>
-              <p className="text-sm text-foreground-muted">
-                Don't worry! You can still play in practice mode without a
-                camera.
+          <Card className="mb-8 bg-destructive border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive-foreground">
+                ⚠️ CAMERA ERROR
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-bold text-destructive-foreground uppercase tracking-wide mb-4">
+                {error}
               </p>
-            </div>
-          </RetroCard>
+              <p className="font-bold text-sm text-destructive-foreground uppercase tracking-wide opacity-80">
+                NO WORRIES! PRACTICE MODE STILL WORKS WITHOUT CAMERA.
+              </p>
+            </CardContent>
+          </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <RetroCard title="🎯 How to Play">
-            <div className="space-y-3 text-sm">
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-500 font-bold">1.</span>
-                <p>Choose your favorite mini-game</p>
+        {/* Game Modes Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+          {/* Classic Mode */}
+          <Card className="hover:translate-x-4 hover:translate-y-4 hover:shadow-[24px_24px_0px_hsl(var(--foreground))] transition-all duration-150 hover:scale-105">
+            <CardHeader>
+              <CardTitle>🎯 CLASSIC DESTRUCTION</CardTitle>
+              <CardDescription>ANNIHILATE TARGET COLORS</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 p-8">
+              <div className="space-y-4 font-black text-sm uppercase tracking-wider">
+                <div className="flex items-start space-x-4">
+                  <span className="text-accent text-2xl">→</span>
+                  <span>BRUTALLY POINT CAMERA AT OBJECTS</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-accent text-2xl">→</span>
+                  <span>VIOLENTLY MATCH TARGET COLOR</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-accent text-2xl">→</span>
+                  <span>AGGRESSIVELY SCORE MAXIMUM POINTS</span>
+                </div>
               </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-500 font-bold">2.</span>
-                <p>Allow camera access when prompted</p>
+              <div className="space-y-4">
+                <Button
+                  onClick={onStartGame}
+                  variant="accent"
+                  size="lg"
+                  className="w-full text-xl"
+                >
+                  💀 DESTROY COLORS
+                </Button>
+                <Button
+                  onClick={onPracticeMode}
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-xl"
+                >
+                  🔥 PRACTICE BRUTALITY
+                </Button>
               </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-500 font-bold">3.</span>
-                <p>Point your camera at an object with the target color</p>
-              </div>
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-500 font-bold">4.</span>
-                <p>Capture the color and see your score!</p>
-              </div>
-            </div>
-          </RetroCard>
+            </CardContent>
+          </Card>
 
-          <RetroCard title="🏆 Scoring System">
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span>90-100%</span>
-                <span className="text-green-600 font-bold">
-                  🎯 Perfect Match!
-                </span>
+          {/* Daily Challenge */}
+          <Card className="hover:translate-x-4 hover:translate-y-4 hover:shadow-[24px_24px_0px_hsl(var(--foreground))] transition-all duration-150 hover:scale-105">
+            <CardHeader>
+              <CardTitle>📅 DAILY ANNIHILATION</CardTitle>
+              <CardDescription>GLOBAL DOMINATION MODE</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 p-8">
+              <div className="space-y-4 font-black text-sm uppercase tracking-wider">
+                <div className="flex items-start space-x-4">
+                  <span className="text-secondary text-2xl">→</span>
+                  <span>ONE BRUTAL CHALLENGE PER DAY</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-secondary text-2xl">→</span>
+                  <span>CRUSHING GLOBAL LEADERBOARD</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-secondary text-2xl">→</span>
+                  <span>MERCILESS DAILY STREAKS</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span>80-89%</span>
-                <span className="text-green-600 font-bold">🌟 Excellent!</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>70-79%</span>
-                <span className="text-blue-600 font-bold">👍 Great Job!</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>60-69%</span>
-                <span className="text-yellow-600 font-bold">😊 Good!</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Below 60%</span>
-                <span className="text-orange-600 font-bold">
-                  💪 Keep Trying!
-                </span>
-              </div>
-            </div>
-          </RetroCard>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <RetroCard title="🌟 Daily Challenge">
-            <div className="text-center space-y-4">
-              <div className="text-4xl">🌟</div>
-              <h3 className="font-mono text-lg font-bold">Daily Color Hunt</h3>
-              <p className="text-sm text-foreground-muted">
-                A new color every day! Challenge yourself and compete on the
-                global leaderboard. Unlimited attempts to beat your best score.
-              </p>
-              <RetroButton
+              <Button
                 onClick={onDailyMode}
-                variant="primary"
-                size="lg"
-                className="w-full"
-              >
-                🚀 Start Daily Challenge
-              </RetroButton>
-            </div>
-          </RetroCard>
-
-          <RetroCard title="🎉 Party Mode">
-            <div className="text-center space-y-4">
-              <div className="text-4xl">🎉</div>
-              <h3 className="font-mono text-lg font-bold">Local Party Game</h3>
-              <p className="text-sm text-foreground-muted">
-                Host a party! One person gives a color, others hunt for it.
-                Perfect for group fun and friendly competition.
-              </p>
-              <RetroButton
-                onClick={onPartyMode}
                 variant="secondary"
                 size="lg"
-                className="w-full"
+                className="w-full text-xl"
               >
-                🎮 Start Party Mode
-              </RetroButton>
-            </div>
-          </RetroCard>
+                ⚡ TODAY&apos;S DESTRUCTION
+              </Button>
+            </CardContent>
+          </Card>
 
-          <RetroCard title="🎨 Color Mixing">
-            <div className="text-center space-y-4">
-              <div className="text-4xl">🎨</div>
-              <h3 className="font-mono text-lg font-bold">Mix Two Colors</h3>
-              <p className="text-sm text-foreground-muted">
-                Blend colors in perfect proportions! Mix two colors to create
-                the target color. Test your color theory knowledge.
-              </p>
-              <RetroButton
+          {/* Color Mixing */}
+          <Card className="hover:translate-x-4 hover:translate-y-4 hover:shadow-[24px_24px_0px_hsl(var(--foreground))] transition-all duration-150 hover:scale-105">
+            <CardHeader>
+              <CardTitle>🎨 COLOR WARFARE</CardTitle>
+              <CardDescription>MIXING MAYHEM MODE</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 p-8">
+              <div className="space-y-4 font-black text-sm uppercase tracking-wider">
+                <div className="flex items-start space-x-4">
+                  <span className="text-info text-2xl">→</span>
+                  <span>VIOLENTLY BLEND RGB VALUES</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-info text-2xl">→</span>
+                  <span>AGGRESSIVELY MATCH TARGET SHADE</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-info text-2xl">→</span>
+                  <span>BRUTALLY LEARN COLOR THEORY</span>
+                </div>
+              </div>
+              <Button
                 onClick={onMixMode}
-                variant="secondary"
+                variant="default"
                 size="lg"
-                className="w-full"
+                className="w-full bg-info border-info text-info-foreground text-xl"
               >
-                🎨 Start Mixing
-              </RetroButton>
-            </div>
-          </RetroCard>
+                🧪 START MIXING CHAOS
+              </Button>
+            </CardContent>
+          </Card>
 
-          <RetroCard title="🔮 Coming Soon">
-            <div className="text-center space-y-4">
-              <div className="text-4xl">🔮</div>
-              <h3 className="font-mono text-lg font-bold">Mystery Game</h3>
-              <p className="text-sm text-foreground-muted">
-                A brand new color challenge is in development! Stay tuned for
-                exciting updates and new gameplay modes.
-              </p>
-              <RetroButton
-                onClick={() => {}}
-                disabled
-                variant="secondary"
+          {/* Party Mode */}
+          <Card className="hover:translate-x-4 hover:translate-y-4 hover:shadow-[24px_24px_0px_hsl(var(--foreground))] transition-all duration-150 hover:scale-105">
+            <CardHeader>
+              <CardTitle>🎉 PARTY DESTRUCTION</CardTitle>
+              <CardDescription>MULTIPLAYER APOCALYPSE</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 p-8">
+              <div className="space-y-4 font-black text-sm uppercase tracking-wider">
+                <div className="flex items-start space-x-4">
+                  <span className="text-success text-2xl">→</span>
+                  <span>REAL-TIME MULTIPLAYER CHAOS</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-success text-2xl">→</span>
+                  <span>BRUTALLY COMPETE WITH FRIENDS</span>
+                </div>
+                <div className="flex items-start space-x-4">
+                  <span className="text-success text-2xl">→</span>
+                  <span>INSTANT DESTRUCTION MATCHING</span>
+                </div>
+              </div>
+              <Button
+                onClick={onPartyMode}
+                variant="success"
                 size="lg"
-                className="w-full opacity-50"
+                className="w-full text-xl"
               >
-                🔒 Coming Soon
-              </RetroButton>
-            </div>
-          </RetroCard>
+                💥 JOIN THE CARNAGE
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="text-center space-y-4">
-          <RetroButton
-            onClick={onPracticeMode}
-            variant="secondary"
+        {/* Stats Section */}
+        <div className="text-center mb-12">
+          <Button
+            onClick={onShowStats}
+            variant="ghost"
             size="lg"
-            className="max-w-xs"
+            className="font-black text-3xl uppercase tracking-wider hover:scale-110 transition-transform duration-200"
           >
-            🎯 Practice Mode (No Camera)
-          </RetroButton>
-          <RetroButton onClick={onShowStats} variant="secondary" size="md">
-            📊 View Statistics
-          </RetroButton>
+            📊 DEMOLISH STATS
+          </Button>
         </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-sm text-foreground-muted">
-            💡 <strong>Tip:</strong> Good lighting and a steady hand will
-            improve your color accuracy!
+        {/* Footer */}
+        <div className="text-center border-t-8 border-foreground pt-12 bg-muted">
+          <p className="font-black text-xl uppercase tracking-wide text-foreground mb-8">
+            HYPER BRUTALIST COLOR PERCEPTION ANNIHILATION SYSTEM
           </p>
+          <div className="flex justify-center items-center space-x-6 mt-8">
+            <Badge variant="outline" className="text-lg">
+              V3.0 ULTRA
+            </Badge>
+            <Badge variant="destructive" className="text-lg">
+              HYPER BRUTALIST
+            </Badge>
+            <Badge variant="accent" className="text-lg">
+              MAXIMUM CHAOS
+            </Badge>
+            <Badge variant="success" className="text-lg">
+              ZERO MERCY
+            </Badge>
+          </div>
         </div>
       </div>
     </div>

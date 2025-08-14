@@ -1,17 +1,20 @@
-import {
-  RetroButton,
-  RetroCard,
-  RetroColorSwatch,
-  RetroTimer,
-  RetroSpinner,
-  RetroScoreDisplay,
-  RetroBadge,
-} from "./RetroUI";
-import Webcam from "react-webcam";
+import { RetroButton, RetroCard } from "./RetroUI";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSocket } from "./socket-provider";
-import { QRCodeSVG } from "qrcode.react";
+import { GameInfo, Player, SessionLeaderboard } from "../lib/useSocketIO";
+import { FindColorGame } from "./FindColorGame";
+import { ColorMixingGame } from "./ColorMixingGame";
+
+// Simple QR Code placeholder component
+const SimpleQRCode = ({ value, size }: { value: string; size: number }) => (
+  <div
+    className="border-2 border-gray-300 bg-white flex items-center justify-center text-xs text-center p-2"
+    style={{ width: size, height: size }}
+  >
+    QR: {value}
+  </div>
+);
 
 export const MultiplayerPartyScreen = () => {
   const [playerName, setPlayerName] = useState("");
@@ -19,13 +22,6 @@ export const MultiplayerPartyScreen = () => {
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [targetColor, setTargetColor] = useState("#ff0000");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-  const [score, setScore] = useState(0);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [webcamReady, setWebcamReady] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
 
   const {
@@ -35,13 +31,11 @@ export const MultiplayerPartyScreen = () => {
     gameInfo,
     events,
     connect,
-    disconnect,
     createRoom,
     joinRoom,
     leaveRoom,
     selectGameType,
     startRound,
-    endRound,
     continueSession,
     endSession,
     submitScore,
@@ -60,33 +54,9 @@ export const MultiplayerPartyScreen = () => {
   // Handle game state changes
   useEffect(() => {
     if (gameInfo) {
-      if (gameInfo.gameState === "playing") {
-        setIsPlaying(true);
-        setTimer(0);
-      } else if (
-        gameInfo.gameState === "roundFinished" ||
-        gameInfo.gameState === "sessionFinished"
-      ) {
-        setIsPlaying(false);
-        setShowResult(true);
-      } else {
-        setIsPlaying(false);
-      }
-
       setTargetColor(gameInfo.targetColor);
     }
   }, [gameInfo]);
-
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying && gameInfo?.gameState === "playing") {
-      interval = setInterval(() => {
-        setTimer((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, gameInfo?.gameState]);
 
   // Handle socket events
   useEffect(() => {
@@ -97,16 +67,10 @@ export const MultiplayerPartyScreen = () => {
           console.log("Player joined event received:", event.data);
           break;
         case "roundStarted":
-          setIsPlaying(true);
-          setTimer(0);
           break;
         case "roundFinished":
-          setIsPlaying(false);
-          setShowResult(true);
           break;
         case "sessionEnded":
-          setIsPlaying(false);
-          setShowResult(true);
           break;
         case "error":
           console.error(
@@ -162,12 +126,6 @@ export const MultiplayerPartyScreen = () => {
     }
   };
 
-  const handleEndRound = () => {
-    if (currentRoom && isCurrentUserDenner) {
-      endRound(currentRoom);
-    }
-  };
-
   const handleContinueSession = () => {
     if (currentRoom && isCurrentUserDenner) {
       continueSession(currentRoom);
@@ -178,55 +136,6 @@ export const MultiplayerPartyScreen = () => {
     if (currentRoom && isCurrentUserDenner) {
       endSession(currentRoom);
     }
-  };
-
-  const handleCaptureColor = () => {
-    if (!currentRoom || !isPlaying) return;
-
-    setIsLoading(true);
-
-    // Simulate color capture
-    setTimeout(() => {
-      const capturedScore = Math.floor(Math.random() * 100) + 1;
-      setScore(capturedScore);
-
-      if (currentRoom) {
-        submitScore(currentRoom, capturedScore, timer * 1000);
-      }
-
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const handleUserMedia = () => {
-    setCameraError(null);
-    setWebcamReady(true);
-  };
-
-  const handleUserMediaError = (error: string | DOMException) => {
-    let message = "Camera initialization failed.";
-
-    if (typeof error === "object" && error.name === "NotAllowedError") {
-      message =
-        "Camera access denied. Please allow camera permissions and refresh the page.";
-    } else if (typeof error === "object" && error.name === "NotFoundError") {
-      message = "No camera found on this device.";
-    } else if (typeof error === "object" && error.name === "NotReadableError") {
-      message =
-        "Camera is in use by another application. Please close other apps using the camera.";
-    } else if (
-      typeof error === "object" &&
-      error.name === "OverconstrainedError"
-    ) {
-      message =
-        "Camera doesn't support the required resolution. Please try a different camera.";
-    } else if (typeof error === "object" && error.name === "SecurityError") {
-      message =
-        "Camera access blocked for security reasons. Please check your browser settings.";
-    }
-
-    setCameraError(message);
-    setWebcamReady(false);
   };
 
   const getGameStateDisplay = () => {
@@ -503,7 +412,7 @@ export const MultiplayerPartyScreen = () => {
               <h2 className="text-2xl font-bold mb-4">📱 Share Room</h2>
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <QRCodeSVG value={getRoomShareUrl()} size={200} />
+                  <SimpleQRCode value={getRoomShareUrl()} size={200} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-2">Room Code:</p>
@@ -551,13 +460,17 @@ export const MultiplayerPartyScreen = () => {
         {gameInfo?.gameState === "playing" && (
           <PlayingScreen
             gameInfo={gameInfo}
-            timer={timer}
-            isLoading={isLoading}
-            webcamReady={webcamReady}
-            cameraError={cameraError}
-            onCaptureColor={handleCaptureColor}
-            onUserMedia={handleUserMedia}
-            onUserMediaError={handleUserMediaError}
+            isCurrentUserDenner={isCurrentUserDenner}
+            onScoreSubmit={(score: number, timeTaken: number) => {
+              if (currentRoom) {
+                submitScore(currentRoom, score, timeTaken);
+              }
+            }}
+            onEndRound={() => {
+              if (currentRoom) {
+                endRound(currentRoom);
+              }
+            }}
           />
         )}
 
@@ -636,7 +549,7 @@ const LobbyScreen = ({
   isCurrentUserDenner,
   onSelectGameType,
 }: {
-  gameInfo: any;
+  gameInfo: GameInfo;
   isCurrentUserDenner: boolean;
   onSelectGameType: (gameType: "findColor" | "colorMixing") => void;
 }) => (
@@ -716,7 +629,7 @@ const GameSelectionScreen = ({
   isCurrentUserDenner,
   onStartRound,
 }: {
-  gameInfo: any;
+  gameInfo: GameInfo;
   isCurrentUserDenner: boolean;
   onStartRound: () => void;
 }) => (
@@ -767,126 +680,47 @@ const GameSelectionScreen = ({
 // Component for playing state
 const PlayingScreen = ({
   gameInfo,
-  timer,
-  isLoading,
-  webcamReady,
-  cameraError,
-  onCaptureColor,
-  onUserMedia,
-  onUserMediaError,
+  isCurrentUserDenner,
+  onScoreSubmit,
+  onEndRound,
 }: {
-  gameInfo: any;
-  timer: number;
-  isLoading: boolean;
-  webcamReady: boolean;
-  cameraError: string | null;
-  onCaptureColor: () => void;
-  onUserMedia: () => void;
-  onUserMediaError: (error: string | DOMException) => void;
+  gameInfo: GameInfo;
+  isCurrentUserDenner: boolean;
+  onScoreSubmit: (score: number, timeTaken: number) => void;
+  onEndRound: () => void;
 }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <RetroCard title="🎯 Target Color">
-      <div className="text-center space-y-4">
-        <RetroColorSwatch
-          color={gameInfo.targetColor}
-          size="lg"
-          showHex
-          className="mx-auto"
-        />
-        <p className="font-mono text-sm text-foreground-muted">
-          {gameInfo.gameType === "findColor"
-            ? "Find this color in your surroundings!"
-            : "Mix RGB values to match this color!"}
-        </p>
-
-        <div className="space-y-2">
-          <div className="font-mono text-sm font-bold text-foreground-muted">
-            Time: {timer}s
-          </div>
-          {gameInfo.gameType === "findColor" && (
-            <RetroButton
-              onClick={onCaptureColor}
-              variant="success"
-              size="lg"
-              className="w-full"
-              disabled={isLoading || !webcamReady}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <RetroSpinner className="mr-2" />
-                  Capturing...
-                </span>
-              ) : !webcamReady ? (
-                <span className="flex items-center justify-center">
-                  <span className="mr-2">📷</span>
-                  Camera Setting Up...
-                </span>
-              ) : (
-                "📸 CAPTURE COLOR"
-              )}
-            </RetroButton>
-          )}
-        </div>
-      </div>
-    </RetroCard>
-
+  <div className="max-w-4xl mx-auto mb-6">
     {gameInfo.gameType === "findColor" && (
-      <RetroCard title="📷 Camera View">
-        <div className="text-center space-y-4">
-          {!webcamReady && !cameraError && (
-            <div className="space-y-3">
-              <div className="text-4xl">📷</div>
-              <p className="font-mono text-sm text-foreground-muted">
-                Initializing camera...
-              </p>
-            </div>
-          )}
+      <FindColorGame
+        targetColor={gameInfo.targetColor}
+        onScoreSubmit={onScoreSubmit}
+        isMultiplayer={true}
+        disabled={false}
+      />
+    )}
 
-          {webcamReady && <div className="text-4xl">✅</div>}
+    {gameInfo.gameType === "colorMixing" && (
+      <ColorMixingGame
+        targetColor={gameInfo.targetColor}
+        onScoreSubmit={onScoreSubmit}
+        isMultiplayer={true}
+        disabled={false}
+      />
+    )}
 
-          <div className="relative">
-            <Webcam
-              audio={false}
-              screenshotFormat="image/jpeg"
-              className={`w-full h-64 object-cover rounded-2xl border-2 shadow-lg ${
-                webcamReady ? "border-green-500" : "border-gray-300 opacity-50"
-              }`}
-              videoConstraints={{
-                facingMode: "user",
-                width: { ideal: 640, min: 320 },
-                height: { ideal: 480, min: 240 },
-                frameRate: { ideal: 30, min: 15 },
-              }}
-              onUserMedia={onUserMedia}
-              onUserMediaError={onUserMediaError}
-            />
-
-            {webcamReady && (
-              <>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                  <div className="w-16 h-16 border-4 border-white rounded-full pointer-events-none shadow-lg animate-pulse" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-2 border-red-500 rounded-full" />
-                </div>
-                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                  LIVE
-                </div>
-              </>
-            )}
-          </div>
-
-          {cameraError && (
-            <div className="space-y-3">
-              <div className="text-4xl">❌</div>
-              <p className="font-mono text-sm text-red-600 font-bold">
-                Camera Error
-              </p>
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-3 text-xs text-red-700">
-                <p>{cameraError}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </RetroCard>
+    {/* Denner Controls */}
+    {isCurrentUserDenner && (
+      <div className="mt-8 text-center">
+        <button
+          onClick={onEndRound}
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-2 hover:translate-y-2 transition-all duration-100"
+        >
+          🏁 END ROUND
+        </button>
+        <p className="mt-2 text-sm text-gray-600">
+          As the denner, you can end this round when everyone is ready
+        </p>
+      </div>
     )}
   </div>
 );
@@ -898,7 +732,7 @@ const RoundFinishedScreen = ({
   onContinueSession,
   onEndSession,
 }: {
-  gameInfo: any;
+  gameInfo: GameInfo;
   isCurrentUserDenner: boolean;
   onContinueSession: () => void;
   onEndSession: () => void;
@@ -911,8 +745,8 @@ const RoundFinishedScreen = ({
           <h3 className="font-bold mb-4 text-center">Round Leaderboard</h3>
           <div className="space-y-2">
             {gameInfo.players
-              .sort((a: any, b: any) => b.score - a.score)
-              .map((player: any, index: number) => (
+              .sort((a: Player, b: Player) => b.score - a.score)
+              .map((player: Player, index: number) => (
                 <div
                   key={player.id}
                   className="flex justify-between items-center py-2 px-4 bg-gray-50 rounded-lg"
@@ -1009,7 +843,7 @@ const SessionFinishedScreen = ({
   gameInfo,
   onLeaveRoom,
 }: {
-  gameInfo: any;
+  gameInfo: GameInfo;
   onLeaveRoom: () => void;
 }) => (
   <div className="max-w-4xl mx-auto mb-6">
@@ -1021,38 +855,40 @@ const SessionFinishedScreen = ({
 
         {/* Final Leaderboard */}
         <div className="space-y-3">
-          {gameInfo.sessionLeaderboard.map((player: any, index: number) => (
-            <div
-              key={player.id}
-              className={`flex justify-between items-center py-4 px-6 rounded-2xl ${
-                index === 0
-                  ? "bg-gradient-to-r from-yellow-200 to-yellow-300 border-2 border-yellow-400"
-                  : index === 1
-                    ? "bg-gradient-to-r from-gray-200 to-gray-300 border-2 border-gray-400"
-                    : index === 2
-                      ? "bg-gradient-to-r from-orange-200 to-orange-300 border-2 border-orange-400"
-                      : "bg-gray-50"
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">
-                  {index === 0 && "🥇"}
-                  {index === 1 && "🥈"}
-                  {index === 2 && "🥉"}
-                  {index > 2 && `${index + 1}.`}
-                </span>
-                <span className="font-bold text-lg">{player.name}</span>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-xl">
-                  {player.sessionScore} pts
+          {gameInfo.sessionLeaderboard.map(
+            (player: SessionLeaderboard, index: number) => (
+              <div
+                key={player.id}
+                className={`flex justify-between items-center py-4 px-6 rounded-2xl ${
+                  index === 0
+                    ? "bg-gradient-to-r from-yellow-200 to-yellow-300 border-2 border-yellow-400"
+                    : index === 1
+                      ? "bg-gradient-to-r from-gray-200 to-gray-300 border-2 border-gray-400"
+                      : index === 2
+                        ? "bg-gradient-to-r from-orange-200 to-orange-300 border-2 border-orange-400"
+                        : "bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">
+                    {index === 0 && "🥇"}
+                    {index === 1 && "🥈"}
+                    {index === 2 && "🥉"}
+                    {index > 2 && `${index + 1}.`}
+                  </span>
+                  <span className="font-bold text-lg">{player.name}</span>
                 </div>
-                <div className="text-sm text-gray-600">
-                  Rounds: {player.roundScores.join(", ")}
+                <div className="text-right">
+                  <div className="font-bold text-xl">
+                    {player.sessionScore} pts
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Rounds: {player.roundScores.join(", ")}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
 
         <div className="pt-6 space-y-4">
