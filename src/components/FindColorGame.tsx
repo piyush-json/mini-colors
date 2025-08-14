@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Button } from "./ui/button";
 import {
-  RetroButton,
-  RetroCard,
-  RetroColorSwatch,
-  RetroSpinner,
-} from "./RetroUI";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
 import Webcam from "react-webcam";
 import { ColorSDK } from "@/lib/color-sdk";
 
@@ -174,40 +177,62 @@ export const FindColorGame = ({
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
       {/* Target Color Display */}
-      <RetroCard title="🎯 Target Color">
-        <div className="text-center space-y-4">
-          <RetroColorSwatch
-            color={targetColor}
-            size="lg"
-            showHex
-            className="mx-auto"
+      <Card>
+        <CardHeader>
+          <CardTitle>🎯 TARGET COLOR</CardTitle>
+          <CardDescription>LOCATE AND DESTROY THIS COLOR</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          <div
+            className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+            style={{ backgroundColor: targetColor }}
           />
-          <p className="text-sm text-gray-600">
-            Find this color in your surroundings and capture it!
+          <p className="text-sm font-mono font-black uppercase tracking-wide">
+            {targetColor}
+          </p>
+          <p className="text-sm font-bold uppercase tracking-wide">
+            FIND THIS COLOR IN YOUR SURROUNDINGS AND CAPTURE IT!
           </p>
 
           {gameStarted && !gameFinished && (
-            <div className="text-lg font-mono font-bold">Time: {timer}s</div>
+            <Badge variant="outline" className="text-lg">
+              TIME: {timer}S
+            </Badge>
           )}
 
           {lastScore !== null && (
-            <div className="text-xl font-bold text-green-600">
-              Score: {lastScore}%
-            </div>
+            <Badge
+              variant={
+                lastScore >= 80
+                  ? "success"
+                  : lastScore >= 60
+                    ? "accent"
+                    : lastScore >= 40
+                      ? "secondary"
+                      : "destructive"
+              }
+              className="text-xl"
+            >
+              SCORE: {lastScore}%
+            </Badge>
           )}
-        </div>
-      </RetroCard>
+        </CardContent>
+      </Card>
 
       {/* Camera View */}
-      <RetroCard title="📷 Camera View">
-        <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>📷 CAMERA VIEW</CardTitle>
+          <CardDescription>DESTRUCTION TARGETING SYSTEM</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="relative">
             <Webcam
               ref={webcamRef}
               audio={false}
               screenshotFormat="image/jpeg"
-              className={`w-full h-64 object-cover rounded-lg border-2 ${
-                webcamReady ? "border-green-500" : "border-gray-300 opacity-50"
+              className={`w-full h-64 object-cover border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))] ${
+                webcamReady ? "border-success" : "border-foreground opacity-50"
               }`}
               videoConstraints={{
                 facingMode: "user",
@@ -225,77 +250,79 @@ export const FindColorGame = ({
                   <div className="w-16 h-16 border-4 border-white rounded-full pointer-events-none shadow-lg animate-pulse" />
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-2 border-red-500 rounded-full" />
                 </div>
-                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                  LIVE
+                <div className="absolute top-2 right-2">
+                  <Badge variant="success" className="font-black tracking-wide">
+                    LIVE
+                  </Badge>
                 </div>
               </>
             )}
           </div>
 
           {cameraError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-              {cameraError}
+            <div className="p-3 border-4 border-destructive bg-destructive/10 shadow-[4px_4px_0px_hsl(var(--destructive))]">
+              <p className="text-destructive font-mono font-black uppercase tracking-wide text-sm">
+                {cameraError}
+              </p>
             </div>
           )}
 
           {/* Game Controls */}
           <div className="space-y-2">
             {!gameStarted && !isMultiplayer && (
-              <RetroButton
+              <Button
                 onClick={startGame}
-                variant="primary"
+                variant="default"
                 size="lg"
                 className="w-full"
                 disabled={!webcamReady || disabled}
               >
-                🚀 Start Game
-              </RetroButton>
+                🚀 START GAME
+              </Button>
             )}
 
             {gameStarted && !gameFinished && (
-              <RetroButton
+              <Button
                 onClick={captureColor}
-                variant="success"
+                variant="default"
                 size="lg"
                 className="w-full"
                 disabled={isLoading || !webcamReady || disabled}
               >
-                {isLoading ? (
-                  <span className="flex items-center justify-center">
-                    <RetroSpinner className="mr-2" />
-                    Capturing...
-                  </span>
-                ) : (
-                  "📸 CAPTURE COLOR"
-                )}
-              </RetroButton>
+                {isLoading ? "📸 CAPTURING..." : "📸 CAPTURE COLOR"}
+              </Button>
             )}
 
             {gameFinished && !isMultiplayer && (
               <div className="space-y-2">
-                <RetroButton
+                <Button
                   onClick={resetGame}
-                  variant="primary"
+                  variant="default"
                   size="lg"
                   className="w-full"
                 >
-                  🔄 Play Again
-                </RetroButton>
+                  🔄 PLAY AGAIN
+                </Button>
               </div>
             )}
           </div>
 
           {webcamReady ? (
-            <p className="text-sm text-green-600 font-medium text-center">
-              Camera Ready! Point the crosshair at the target color and capture.
-            </p>
+            <div className="p-2 border-2 border-success bg-success/10">
+              <p className="text-success font-mono font-black uppercase tracking-wide text-sm text-center">
+                CAMERA READY! POINT THE CROSSHAIR AT THE TARGET COLOR AND
+                CAPTURE.
+              </p>
+            </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center">
-              Setting up camera...
-            </p>
+            <div className="p-2 border-2 border-foreground bg-muted">
+              <p className="font-mono font-black uppercase tracking-wide text-sm text-center">
+                SETTING UP CAMERA...
+              </p>
+            </div>
           )}
-        </div>
-      </RetroCard>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,20 +1,17 @@
-import { RetroButton, RetroCard } from "./RetroUI";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
+import Webcam from "react-webcam";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSocket } from "./socket-provider";
-import { GameInfo, Player, SessionLeaderboard } from "../lib/useSocketIO";
-import { FindColorGame } from "./FindColorGame";
-import { ColorMixingGame } from "./ColorMixingGame";
-
-// Simple QR Code placeholder component
-const SimpleQRCode = ({ value, size }: { value: string; size: number }) => (
-  <div
-    className="border-2 border-gray-300 bg-white flex items-center justify-center text-xs text-center p-2"
-    style={{ width: size, height: size }}
-  >
-    QR: {value}
-  </div>
-);
+import { QRCodeSVG } from "qrcode.react";
 
 export const MultiplayerPartyScreen = () => {
   const [playerName, setPlayerName] = useState("");
@@ -22,6 +19,13 @@ export const MultiplayerPartyScreen = () => {
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [targetColor, setTargetColor] = useState("#ff0000");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [score, setScore] = useState(0);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [webcamReady, setWebcamReady] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
 
   const {
@@ -31,11 +35,13 @@ export const MultiplayerPartyScreen = () => {
     gameInfo,
     events,
     connect,
+    disconnect,
     createRoom,
     joinRoom,
     leaveRoom,
     selectGameType,
     startRound,
+    endRound,
     continueSession,
     endSession,
     submitScore,
@@ -54,9 +60,33 @@ export const MultiplayerPartyScreen = () => {
   // Handle game state changes
   useEffect(() => {
     if (gameInfo) {
+      if (gameInfo.gameState === "playing") {
+        setIsPlaying(true);
+        setTimer(0);
+      } else if (
+        gameInfo.gameState === "roundFinished" ||
+        gameInfo.gameState === "sessionFinished"
+      ) {
+        setIsPlaying(false);
+        setShowResult(true);
+      } else {
+        setIsPlaying(false);
+      }
+
       setTargetColor(gameInfo.targetColor);
     }
   }, [gameInfo]);
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && gameInfo?.gameState === "playing") {
+      interval = setInterval(() => {
+        setTimer((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, gameInfo?.gameState]);
 
   // Handle socket events
   useEffect(() => {
@@ -67,10 +97,16 @@ export const MultiplayerPartyScreen = () => {
           console.log("Player joined event received:", event.data);
           break;
         case "roundStarted":
+          setIsPlaying(true);
+          setTimer(0);
           break;
         case "roundFinished":
+          setIsPlaying(false);
+          setShowResult(true);
           break;
         case "sessionEnded":
+          setIsPlaying(false);
+          setShowResult(true);
           break;
         case "error":
           console.error(
@@ -126,6 +162,12 @@ export const MultiplayerPartyScreen = () => {
     }
   };
 
+  const handleEndRound = () => {
+    if (currentRoom && isCurrentUserDenner) {
+      endRound(currentRoom);
+    }
+  };
+
   const handleContinueSession = () => {
     if (currentRoom && isCurrentUserDenner) {
       continueSession(currentRoom);
@@ -136,6 +178,55 @@ export const MultiplayerPartyScreen = () => {
     if (currentRoom && isCurrentUserDenner) {
       endSession(currentRoom);
     }
+  };
+
+  const handleCaptureColor = () => {
+    if (!currentRoom || !isPlaying) return;
+
+    setIsLoading(true);
+
+    // Simulate color capture
+    setTimeout(() => {
+      const capturedScore = Math.floor(Math.random() * 100) + 1;
+      setScore(capturedScore);
+
+      if (currentRoom) {
+        submitScore(currentRoom, capturedScore, timer * 1000);
+      }
+
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  const handleUserMedia = () => {
+    setCameraError(null);
+    setWebcamReady(true);
+  };
+
+  const handleUserMediaError = (error: string | DOMException) => {
+    let message = "Camera initialization failed.";
+
+    if (typeof error === "object" && error.name === "NotAllowedError") {
+      message =
+        "Camera access denied. Please allow camera permissions and refresh the page.";
+    } else if (typeof error === "object" && error.name === "NotFoundError") {
+      message = "No camera found on this device.";
+    } else if (typeof error === "object" && error.name === "NotReadableError") {
+      message =
+        "Camera is in use by another application. Please close other apps using the camera.";
+    } else if (
+      typeof error === "object" &&
+      error.name === "OverconstrainedError"
+    ) {
+      message =
+        "Camera doesn't support the required resolution. Please try a different camera.";
+    } else if (typeof error === "object" && error.name === "SecurityError") {
+      message =
+        "Camera access blocked for security reasons. Please check your browser settings.";
+    }
+
+    setCameraError(message);
+    setWebcamReady(false);
   };
 
   const getGameStateDisplay = () => {
@@ -167,39 +258,54 @@ export const MultiplayerPartyScreen = () => {
   // Show connection form if not connected
   if (!isConnected) {
     return (
-      <div className="min-h-screen retro-bg-gradient p-4">
+      <div className="min-h-screen bg-background p-4 font-mono">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">
-              🎉 Multiplayer Party Mode
+            <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+              🎉 PARTY
+              <br />
+              <span className="text-accent">MODE</span>
             </h1>
-            <p className="text-lg text-foreground-muted">
-              Connecting to multiplayer server...
+            <p className="font-black text-xl uppercase tracking-wide text-muted-foreground">
+              CONNECTING TO DESTRUCTION SERVER...
             </p>
             <div className="mt-4">
               <Link href="/">
-                <RetroButton variant="secondary" size="md">
-                  ← Back to Menu
-                </RetroButton>
+                <Button variant="secondary" size="lg">
+                  ← BACK TO MENU
+                </Button>
               </Link>
             </div>
           </div>
 
-          <RetroCard title="Connection Status">
-            <div className="text-center space-y-4">
-              <div className="text-4xl">🔌</div>
-              <p className="text-foreground-muted">
-                {socketError
-                  ? `Connection failed: ${socketError}`
-                  : "Attempting to connect..."}
-              </p>
-              {socketError && (
-                <RetroButton onClick={connect} variant="primary" size="md">
-                  🔄 Retry Connection
-                </RetroButton>
+          <Card>
+            <CardHeader>
+              <CardTitle>🔌 CONNECTION STATUS</CardTitle>
+              <CardDescription>NETWORK PROTOCOL INITIALIZATION</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <div className="font-black text-8xl">🔌</div>
+              {socketError ? (
+                <Badge variant="destructive" className="text-lg">
+                  CONNECTION FAILED: {socketError}
+                </Badge>
+              ) : (
+                <Badge variant="accent" className="text-lg">
+                  ATTEMPTING CONNECTION...
+                </Badge>
               )}
-            </div>
-          </RetroCard>
+              {socketError && (
+                <Button
+                  onClick={connect}
+                  variant="accent"
+                  size="lg"
+                  className="w-full"
+                >
+                  🔄 RETRY CONNECTION
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -208,152 +314,168 @@ export const MultiplayerPartyScreen = () => {
   // Show room selection if not in a room
   if (!currentRoom) {
     return (
-      <div className="min-h-screen retro-bg-gradient p-4">
+      <div className="min-h-screen bg-background p-4 font-mono">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">
-              🎉 Multiplayer Party Mode
+            <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+              🎉 PARTY
+              <br />
+              <span className="text-accent">MODE</span>
             </h1>
-            <p className="text-lg text-foreground-muted">
-              Create a room or join an existing one to start playing!
+            <p className="font-black text-xl uppercase tracking-wide text-muted-foreground">
+              CREATE OR JOIN DESTRUCTION ROOM!
             </p>
             <div className="mt-4">
               <Link href="/">
-                <RetroButton variant="secondary" size="md">
-                  ← Back to Menu
-                </RetroButton>
+                <Button variant="secondary" size="lg">
+                  ← BACK TO MENU
+                </Button>
               </Link>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <RetroCard title="🎮 Create Room">
-              <div className="text-center space-y-4">
-                <p className="text-sm text-foreground-muted">
-                  Host a new party game and invite friends to join!
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Card className="hover:translate-x-4 hover:translate-y-4 hover:shadow-[24px_24px_0px_hsl(var(--foreground))] transition-all duration-150">
+              <CardHeader>
+                <CardTitle>🎮 CREATE ROOM</CardTitle>
+                <CardDescription>HOST NEW DESTRUCTION SESSION</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-center">
+                <p className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                  HOST A NEW PARTY GAME AND INVITE FRIENDS TO JOIN!
                 </p>
-                <RetroButton
+                <Button
                   onClick={() => setShowCreateForm(true)}
-                  variant="primary"
+                  variant="accent"
                   size="lg"
                   className="w-full"
                 >
-                  🚀 Create Room
-                </RetroButton>
-              </div>
-            </RetroCard>
+                  🚀 CREATE ROOM
+                </Button>
+              </CardContent>
+            </Card>
 
-            <RetroCard title="🎯 Join Room">
-              <div className="text-center space-y-4">
-                <p className="text-sm text-foreground-muted">
-                  Join an existing room with a room code!
+            <Card className="hover:translate-x-4 hover:translate-y-4 hover:shadow-[24px_24px_0px_hsl(var(--foreground))] transition-all duration-150">
+              <CardHeader>
+                <CardTitle>🎯 JOIN ROOM</CardTitle>
+                <CardDescription>ENTER EXISTING DESTRUCTION</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-center">
+                <p className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+                  JOIN AN EXISTING ROOM WITH A ROOM CODE!
                 </p>
-                <RetroButton
+                <Button
                   onClick={() => setShowJoinForm(true)}
                   variant="secondary"
                   size="lg"
                   className="w-full"
                 >
-                  🎯 Join Room
-                </RetroButton>
-              </div>
-            </RetroCard>
+                  🎯 JOIN ROOM
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Create Room Form */}
           {showCreateForm && (
-            <RetroCard title="Create New Room" className="mb-6">
-              <div className="space-y-4">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>🚀 CREATE NEW ROOM</CardTitle>
+                <CardDescription>
+                  SETUP YOUR DESTRUCTION SESSION
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Your Name
+                  <label className="font-black text-sm uppercase tracking-wide mb-2 block">
+                    YOUR NAME:
                   </label>
                   <input
                     type="text"
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded font-mono"
-                    placeholder="Enter your name"
+                    placeholder="ENTER YOUR NAME"
+                    className="w-full p-4 border-4 border-foreground bg-background font-mono font-bold uppercase tracking-wide focus:outline-none focus:translate-x-1 focus:translate-y-1 shadow-[8px_8px_0px_hsl(var(--foreground))]"
                     maxLength={20}
                   />
                 </div>
 
-                <div className="flex gap-2">
-                  <RetroButton
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
                     onClick={handleCreateRoom}
-                    variant="primary"
-                    size="md"
-                    className="flex-1"
+                    variant="accent"
+                    size="lg"
                     disabled={!playerName.trim()}
                   >
-                    🚀 Create Room
-                  </RetroButton>
-                  <RetroButton
+                    🚀 CREATE ROOM
+                  </Button>
+                  <Button
                     onClick={() => setShowCreateForm(false)}
                     variant="secondary"
-                    size="md"
-                    className="flex-1"
+                    size="lg"
                   >
-                    Cancel
-                  </RetroButton>
+                    ❌ CANCEL
+                  </Button>
                 </div>
-              </div>
-            </RetroCard>
+              </CardContent>
+            </Card>
           )}
 
           {/* Join Room Form */}
           {showJoinForm && (
-            <RetroCard title="Join Existing Room" className="mb-6">
-              <div className="space-y-4">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>🎯 JOIN EXISTING ROOM</CardTitle>
+                <CardDescription>ENTER THE BATTLEFIELD</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Your Name
+                  <label className="font-black text-sm uppercase tracking-wide mb-2 block">
+                    YOUR NAME:
                   </label>
                   <input
                     type="text"
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded font-mono"
-                    placeholder="Enter your name"
+                    placeholder="ENTER YOUR NAME"
+                    className="w-full p-4 border-4 border-foreground bg-background font-mono font-bold uppercase tracking-wide focus:outline-none focus:translate-x-1 focus:translate-y-1 shadow-[8px_8px_0px_hsl(var(--foreground))]"
                     maxLength={20}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Room Code
+                  <label className="font-black text-sm uppercase tracking-wide mb-2 block">
+                    ROOM CODE:
                   </label>
                   <input
                     type="text"
                     value={roomId}
                     onChange={(e) => setRoomId(e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 border border-gray-300 rounded font-mono text-center text-lg tracking-widest"
                     placeholder="ABC123"
+                    className="w-full p-4 border-4 border-foreground bg-background font-mono font-bold uppercase tracking-widest text-center text-lg focus:outline-none focus:translate-x-1 focus:translate-y-1 shadow-[8px_8px_0px_hsl(var(--foreground))]"
                     maxLength={6}
                   />
                 </div>
 
-                <div className="flex gap-2">
-                  <RetroButton
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
                     onClick={handleJoinRoom}
-                    variant="primary"
-                    size="md"
-                    className="flex-1"
+                    variant="secondary"
+                    size="lg"
                     disabled={!playerName.trim() || !roomId.trim()}
                   >
-                    🎯 Join Room
-                  </RetroButton>
-                  <RetroButton
+                    🎯 JOIN ROOM
+                  </Button>
+                  <Button
                     onClick={() => setShowJoinForm(false)}
-                    variant="secondary"
-                    size="md"
-                    className="flex-1"
+                    variant="outline"
+                    size="lg"
                   >
-                    Cancel
-                  </RetroButton>
+                    ❌ CANCEL
+                  </Button>
                 </div>
-              </div>
-            </RetroCard>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -362,46 +484,56 @@ export const MultiplayerPartyScreen = () => {
 
   // Show main game lobby/room
   return (
-    <div className="min-h-screen retro-bg-gradient p-4">
+    <div className="min-h-screen bg-background p-4 font-mono">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-            🎉 Party Room {currentRoom}
+        <div className="text-center mb-8">
+          <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+            🎉 PARTY
+            <br />
+            <span className="text-accent">ROOM</span>
           </h1>
-          <p className="text-lg text-foreground-muted">
+          <div className="flex justify-center items-center space-x-4 mb-4">
+            <Badge variant="outline" className="text-lg">
+              ROOM: {currentRoom}
+            </Badge>
+            {gameInfo && (
+              <>
+                <Badge variant="accent" className="text-lg">
+                  PLAYERS: {gameInfo.playerCount}/{gameInfo.maxPlayers}
+                </Badge>
+                <Badge variant="secondary" className="text-lg">
+                  DENNER: {gameInfo.dennerName}
+                </Badge>
+                {gameInfo.currentRound > 0 && (
+                  <Badge variant="success" className="text-lg">
+                    ROUND: {gameInfo.currentRound}/{gameInfo.maxRounds}
+                  </Badge>
+                )}
+              </>
+            )}
+          </div>
+
+          <Badge
+            variant="accent"
+            className="text-lg w-full text-center p-4 mb-4"
+          >
             {getGameStateDisplay()}
-          </p>
+          </Badge>
 
-          {gameInfo && (
-            <div className="mt-2 space-x-2">
-              <span className="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
-                👥 {gameInfo.playerCount}/{gameInfo.maxPlayers} Players
-              </span>
-              <span className="inline-block bg-purple-100 text-purple-800 text-sm px-3 py-1 rounded-full">
-                👑 Denner: {gameInfo.dennerName}
-              </span>
-              {gameInfo.currentRound > 0 && (
-                <span className="inline-block bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">
-                  🎯 Round {gameInfo.currentRound}/{gameInfo.maxRounds}
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="mt-4 space-x-2">
+          <div className="flex justify-center space-x-4">
             <Link href="/">
-              <RetroButton variant="secondary" size="sm">
-                ← Back to Menu
-              </RetroButton>
+              <Button variant="secondary" size="sm">
+                ← BACK TO MENU
+              </Button>
             </Link>
-            <RetroButton
+            <Button
               variant="secondary"
               size="sm"
               onClick={() => setShowQRCode(!showQRCode)}
             >
-              📱 Share Room
-            </RetroButton>
+              📱 SHARE ROOM
+            </Button>
           </div>
         </div>
 
@@ -412,7 +544,7 @@ export const MultiplayerPartyScreen = () => {
               <h2 className="text-2xl font-bold mb-4">📱 Share Room</h2>
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <SimpleQRCode value={getRoomShareUrl()} size={200} />
+                  <QRCodeSVG value={getRoomShareUrl()} size={200} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-2">Room Code:</p>
@@ -428,13 +560,13 @@ export const MultiplayerPartyScreen = () => {
                 </div>
               </div>
               <div className="mt-6">
-                <RetroButton
+                <Button
                   onClick={() => setShowQRCode(false)}
-                  variant="primary"
+                  variant="accent"
                   size="lg"
                 >
-                  Close
-                </RetroButton>
+                  ❌ CLOSE
+                </Button>
               </div>
             </div>
           </div>
@@ -460,17 +592,13 @@ export const MultiplayerPartyScreen = () => {
         {gameInfo?.gameState === "playing" && (
           <PlayingScreen
             gameInfo={gameInfo}
-            isCurrentUserDenner={isCurrentUserDenner}
-            onScoreSubmit={(score: number, timeTaken: number) => {
-              if (currentRoom) {
-                submitScore(currentRoom, score, timeTaken);
-              }
-            }}
-            onEndRound={() => {
-              if (currentRoom) {
-                endRound(currentRoom);
-              }
-            }}
+            timer={timer}
+            isLoading={isLoading}
+            webcamReady={webcamReady}
+            cameraError={cameraError}
+            onCaptureColor={handleCaptureColor}
+            onUserMedia={handleUserMedia}
+            onUserMediaError={handleUserMediaError}
           />
         )}
 
@@ -492,51 +620,77 @@ export const MultiplayerPartyScreen = () => {
 
         {/* Players List */}
         {gameInfo && (
-          <RetroCard title="Players" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {gameInfo.players.map((player) => (
-                <div
-                  key={player.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-2">
-                    {player.id === gameInfo.hostId && (
-                      <span className="text-purple-500">👑</span>
-                    )}
-                    <span className="font-medium">{player.name}</span>
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>👥 PLAYERS</CardTitle>
+              <CardDescription>DESTRUCTION PARTICIPANTS</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gameInfo.players.map((player) => (
+                  <div
+                    key={player.id}
+                    className="p-4 border-4 border-foreground bg-muted"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-black text-lg uppercase tracking-wide">
+                          {player.id === gameInfo.hostId && "👑 "}
+                          {player.name}
+                        </div>
+                        <div className="text-sm">
+                          <Badge variant="outline" className="mt-2">
+                            SESSION: {player.sessionScore}PTS
+                          </Badge>
+                          {gameInfo.gameState === "playing" && (
+                            <Badge variant="accent" className="mt-2 ml-2">
+                              ROUND: {player.score}PTS
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right text-sm">
-                    <div>Session: {player.sessionScore}pts</div>
-                    {gameInfo.gameState === "playing" && (
-                      <div>Round: {player.score}pts</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </RetroCard>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Game Events */}
         {events.length > 0 && (
-          <RetroCard title="Game Activity" className="mt-6">
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {events.slice(-5).map((event, index) => (
-                <div key={index} className="text-sm p-2 bg-gray-50 rounded">
-                  {event.type === "playerJoined" &&
-                    `👋 ${(event.data as { playerName?: string })?.playerName || "A player"} joined the room`}
-                  {event.type === "playerLeft" && `👋 A player left the room`}
-                  {event.type === "gameTypeSelected" && `🎮 Game type selected`}
-                  {event.type === "roundStarted" && `🚀 Round started!`}
-                  {event.type === "roundFinished" && `🏁 Round finished!`}
-                  {event.type === "dennerChanged" && `👑 New denner selected`}
-                  {event.type === "sessionEnded" && `🎊 Session ended!`}
-                  {event.type === "scoreSubmitted" &&
-                    `📊 ${(event.data as { score?: number })?.score || 0}% score submitted`}
-                </div>
-              ))}
-            </div>
-          </RetroCard>
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>⚡ GAME ACTIVITY</CardTitle>
+              <CardDescription>REAL-TIME DESTRUCTION FEED</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {events.slice(-10).map((event, index) => (
+                  <div
+                    key={index}
+                    className="p-2 border-2 border-foreground bg-muted font-mono text-sm"
+                  >
+                    <span className="font-black uppercase tracking-wide">
+                      {event.type === "playerJoined" &&
+                        `👋 ${(event.data as { playerName?: string })?.playerName || "A PLAYER"} JOINED THE ROOM`}
+                      {event.type === "playerLeft" &&
+                        `👋 A PLAYER LEFT THE ROOM`}
+                      {event.type === "gameTypeSelected" &&
+                        `🎮 GAME TYPE SELECTED`}
+                      {event.type === "roundStarted" && `🚀 ROUND STARTED!`}
+                      {event.type === "roundFinished" && `🏁 ROUND FINISHED!`}
+                      {event.type === "dennerChanged" &&
+                        `👑 NEW DENNER SELECTED`}
+                      {event.type === "sessionEnded" && `🎊 SESSION ENDED!`}
+                      {event.type === "scoreSubmitted" &&
+                        `📊 ${(event.data as { score?: number })?.score || 0}% SCORE SUBMITTED`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
@@ -549,77 +703,92 @@ const LobbyScreen = ({
   isCurrentUserDenner,
   onSelectGameType,
 }: {
-  gameInfo: GameInfo;
+  gameInfo: any;
   isCurrentUserDenner: boolean;
   onSelectGameType: (gameType: "findColor" | "colorMixing") => void;
 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-    <RetroCard title="🎮 Select Game Type">
-      <div className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle>🎮 SELECT GAME TYPE</CardTitle>
+        <CardDescription>CHOOSE YOUR DESTRUCTION METHOD</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {isCurrentUserDenner ? (
           <>
-            <p className="text-sm text-foreground-muted mb-4">
-              As the denner, choose which game to play this round:
+            <p className="font-bold text-sm uppercase tracking-wide text-muted-foreground mb-4">
+              AS THE DENNER, CHOOSE WHICH GAME TO PLAY THIS ROUND:
             </p>
             <div className="space-y-3">
-              <RetroButton
+              <Button
                 onClick={() => onSelectGameType("findColor")}
-                variant="primary"
+                variant="accent"
                 size="lg"
-                className="w-full"
+                className="w-full h-auto p-6 flex-col space-y-2"
               >
-                🎯 Find Color Game
-                <br />
-                <span className="text-sm font-normal">
-                  Use camera to find matching colors
-                </span>
-              </RetroButton>
-              <RetroButton
+                <div className="font-black text-2xl">🎯</div>
+                <div className="font-black text-lg uppercase">
+                  FIND COLOR GAME
+                </div>
+                <div className="font-bold text-sm uppercase tracking-wide opacity-80">
+                  USE CAMERA TO FIND MATCHING COLORS
+                </div>
+              </Button>
+              <Button
                 onClick={() => onSelectGameType("colorMixing")}
                 variant="secondary"
                 size="lg"
-                className="w-full"
+                className="w-full h-auto p-6 flex-col space-y-2"
               >
-                🎨 Color Mixing Game
-                <br />
-                <span className="text-sm font-normal">
-                  Mix colors to match the target
-                </span>
-              </RetroButton>
+                <div className="font-black text-2xl">🎨</div>
+                <div className="font-black text-lg uppercase">
+                  COLOR MIXING GAME
+                </div>
+                <div className="font-bold text-sm uppercase tracking-wide opacity-80">
+                  MIX COLORS TO MATCH THE TARGET
+                </div>
+              </Button>
             </div>
           </>
         ) : (
           <div className="text-center space-y-4">
-            <div className="text-4xl">⏳</div>
-            <p className="text-foreground-muted">
-              Waiting for denner <strong>{gameInfo.dennerName}</strong> to
-              select the game type...
+            <div className="font-black text-8xl">⏳</div>
+            <p className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+              WAITING FOR DENNER{" "}
+              <span className="text-accent">{gameInfo.dennerName}</span> TO
+              SELECT THE GAME TYPE...
             </p>
           </div>
         )}
-      </div>
-    </RetroCard>
+      </CardContent>
+    </Card>
 
-    <RetroCard title="📋 Session Info">
-      <div className="space-y-3">
+    <Card>
+      <CardHeader>
+        <CardTitle>📋 SESSION INFO</CardTitle>
+        <CardDescription>CURRENT DESTRUCTION STATUS</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
         <div className="flex justify-between">
-          <span>Current Denner:</span>
-          <span className="font-bold">{gameInfo.dennerName}</span>
+          <span className="font-bold uppercase tracking-wide">
+            CURRENT DENNER:
+          </span>
+          <Badge variant="accent">{gameInfo.dennerName}</Badge>
         </div>
         <div className="flex justify-between">
-          <span>Round:</span>
-          <span>
+          <span className="font-bold uppercase tracking-wide">ROUND:</span>
+          <Badge variant="secondary">
             {gameInfo.currentRound}/{gameInfo.maxRounds}
-          </span>
+          </Badge>
         </div>
         <div className="flex justify-between">
-          <span>Players:</span>
-          <span>
+          <span className="font-bold uppercase tracking-wide">PLAYERS:</span>
+          <Badge variant="outline">
             {gameInfo.playerCount}/{gameInfo.maxPlayers}
-          </span>
+          </Badge>
         </div>
-      </div>
-    </RetroCard>
+      </CardContent>
+    </Card>
   </div>
 );
 
@@ -629,12 +798,12 @@ const GameSelectionScreen = ({
   isCurrentUserDenner,
   onStartRound,
 }: {
-  gameInfo: GameInfo;
+  gameInfo: any;
   isCurrentUserDenner: boolean;
   onStartRound: () => void;
 }) => (
   <div className="max-w-2xl mx-auto mb-6">
-    <RetroCard
+    <Card
       title={`🎮 ${gameInfo.gameType === "findColor" ? "Find Color" : "Color Mixing"} Game`}
     >
       <div className="text-center space-y-4">
@@ -655,14 +824,14 @@ const GameSelectionScreen = ({
         {isCurrentUserDenner ? (
           <div className="space-y-3">
             <p className="text-sm font-medium">Ready to start the round?</p>
-            <RetroButton
+            <Button
               onClick={onStartRound}
-              variant="primary"
+              variant="accent"
               size="lg"
               className="w-full"
             >
               🚀 Start Round {gameInfo.currentRound + 1}
-            </RetroButton>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -673,54 +842,144 @@ const GameSelectionScreen = ({
           </div>
         )}
       </div>
-    </RetroCard>
+    </Card>
   </div>
 );
 
 // Component for playing state
 const PlayingScreen = ({
   gameInfo,
-  isCurrentUserDenner,
-  onScoreSubmit,
-  onEndRound,
+  timer,
+  isLoading,
+  webcamReady,
+  cameraError,
+  onCaptureColor,
+  onUserMedia,
+  onUserMediaError,
 }: {
-  gameInfo: GameInfo;
-  isCurrentUserDenner: boolean;
-  onScoreSubmit: (score: number, timeTaken: number) => void;
-  onEndRound: () => void;
+  gameInfo: any;
+  timer: number;
+  isLoading: boolean;
+  webcamReady: boolean;
+  cameraError: string | null;
+  onCaptureColor: () => void;
+  onUserMedia: () => void;
+  onUserMediaError: (error: string | DOMException) => void;
 }) => (
-  <div className="max-w-4xl mx-auto mb-6">
-    {gameInfo.gameType === "findColor" && (
-      <FindColorGame
-        targetColor={gameInfo.targetColor}
-        onScoreSubmit={onScoreSubmit}
-        isMultiplayer={true}
-        disabled={false}
-      />
-    )}
-
-    {gameInfo.gameType === "colorMixing" && (
-      <ColorMixingGame
-        targetColor={gameInfo.targetColor}
-        onScoreSubmit={onScoreSubmit}
-        isMultiplayer={true}
-        disabled={false}
-      />
-    )}
-
-    {/* Denner Controls */}
-    {isCurrentUserDenner && (
-      <div className="mt-8 text-center">
-        <button
-          onClick={onEndRound}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-2 hover:translate-y-2 transition-all duration-100"
-        >
-          🏁 END ROUND
-        </button>
-        <p className="mt-2 text-sm text-gray-600">
-          As the denner, you can end this round when everyone is ready
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <Card>
+      <CardHeader>
+        <CardTitle>🎯 TARGET COLOR</CardTitle>
+        <CardDescription>MATCH THIS EXACT COLOR</CardDescription>
+      </CardHeader>
+      <CardContent className="text-center space-y-4">
+        <div
+          className="w-full h-32 border-8 border-foreground shadow-[16px_16px_0px_hsl(var(--foreground))] mx-auto"
+          style={{ backgroundColor: gameInfo.targetColor }}
+        />
+        <Badge variant="outline" className="mt-2">
+          {gameInfo.targetColor}
+        </Badge>
+        <p className="font-bold text-sm uppercase tracking-wide text-muted-foreground">
+          {gameInfo.gameType === "findColor"
+            ? "FIND THIS COLOR IN YOUR SURROUNDINGS!"
+            : "MIX RGB VALUES TO MATCH THIS COLOR!"}
         </p>
-      </div>
+
+        <div className="space-y-2">
+          <div className="font-mono text-sm font-bold text-foreground-muted">
+            Time: {timer}s
+          </div>
+          {gameInfo.gameType === "findColor" && (
+            <Button
+              onClick={onCaptureColor}
+              variant="success"
+              size="lg"
+              className="w-full"
+              disabled={isLoading || !webcamReady}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <div className="mr-2" />
+                  Capturing...
+                </span>
+              ) : !webcamReady ? (
+                <span className="flex items-center justify-center">
+                  <span className="mr-2">📷</span>
+                  Camera Setting Up...
+                </span>
+              ) : (
+                "📸 CAPTURE COLOR"
+              )}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+
+    {gameInfo.gameType === "findColor" && (
+      <Card>
+        <CardHeader>
+          <CardTitle>📷 CAMERA VIEW</CardTitle>
+          <CardDescription>USE YOUR CAMERA TO HUNT COLORS</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          {!webcamReady && !cameraError && (
+            <div className="space-y-3">
+              <div className="text-4xl">📷</div>
+              <p className="font-mono text-sm text-foreground-muted">
+                Initializing camera...
+              </p>
+            </div>
+          )}
+
+          {webcamReady && <div className="text-4xl">✅</div>}
+
+          <div className="relative">
+            <Webcam
+              audio={false}
+              screenshotFormat="image/jpeg"
+              className={`w-full h-64 object-cover rounded-2xl border-2 shadow-lg ${
+                webcamReady ? "border-green-500" : "border-gray-300 opacity-50"
+              }`}
+              videoConstraints={{
+                facingMode: "user",
+                width: { ideal: 640, min: 320 },
+                height: { ideal: 480, min: 240 },
+                frameRate: { ideal: 30, min: 15 },
+              }}
+              onUserMedia={onUserMedia}
+              onUserMediaError={onUserMediaError}
+            />
+
+            {webcamReady && (
+              <>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-16 h-16 border-4 border-white rounded-full pointer-events-none shadow-lg animate-pulse" />
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-2 border-red-500 rounded-full" />
+                </div>
+                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                  LIVE
+                </div>
+              </>
+            )}
+          </div>
+
+          {cameraError && (
+            <div className="space-y-3">
+              <div className="text-4xl">❌</div>
+              <p className="font-mono text-sm text-red-600 font-bold">
+                CAMERA ERROR
+              </p>
+              <div className="bg-destructive/10 border-4 border-destructive p-4 font-mono text-sm text-destructive">
+                <p className="font-bold uppercase tracking-wide">
+                  {cameraError}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     )}
   </div>
 );
@@ -732,21 +991,21 @@ const RoundFinishedScreen = ({
   onContinueSession,
   onEndSession,
 }: {
-  gameInfo: GameInfo;
+  gameInfo: any;
   isCurrentUserDenner: boolean;
   onContinueSession: () => void;
   onEndSession: () => void;
 }) => (
   <div className="max-w-4xl mx-auto mb-6">
-    <RetroCard title={`🏁 Round ${gameInfo.currentRound} Results`}>
+    <Card title={`🏁 Round ${gameInfo.currentRound} Results`}>
       <div className="space-y-6">
         {/* Round Leaderboard */}
         <div>
           <h3 className="font-bold mb-4 text-center">Round Leaderboard</h3>
           <div className="space-y-2">
             {gameInfo.players
-              .sort((a: Player, b: Player) => b.score - a.score)
-              .map((player: Player, index: number) => (
+              .sort((a: any, b: any) => b.score - a.score)
+              .map((player: any, index: number) => (
                 <div
                   key={player.id}
                   className="flex justify-between items-center py-2 px-4 bg-gray-50 rounded-lg"
@@ -781,9 +1040,9 @@ const RoundFinishedScreen = ({
             <h3 className="font-bold mb-4 text-center">Denner Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {gameInfo.currentRound < gameInfo.maxRounds ? (
-                <RetroButton
+                <Button
                   onClick={onContinueSession}
-                  variant="primary"
+                  variant="accent"
                   size="lg"
                   className="w-full"
                 >
@@ -792,12 +1051,12 @@ const RoundFinishedScreen = ({
                   <span className="text-sm font-normal">
                     New denner will be selected
                   </span>
-                </RetroButton>
+                </Button>
               ) : (
                 <div className="md:col-span-2">
-                  <RetroButton
+                  <Button
                     onClick={onEndSession}
-                    variant="primary"
+                    variant="accent"
                     size="lg"
                     className="w-full"
                   >
@@ -806,10 +1065,10 @@ const RoundFinishedScreen = ({
                     <span className="text-sm font-normal">
                       All rounds completed
                     </span>
-                  </RetroButton>
+                  </Button>
                 </div>
               )}
-              <RetroButton
+              <Button
                 onClick={onEndSession}
                 variant="secondary"
                 size="lg"
@@ -820,7 +1079,7 @@ const RoundFinishedScreen = ({
                 <span className="text-sm font-normal">
                   Show final leaderboard
                 </span>
-              </RetroButton>
+              </Button>
             </div>
           </div>
         )}
@@ -834,7 +1093,7 @@ const RoundFinishedScreen = ({
           </div>
         )}
       </div>
-    </RetroCard>
+    </Card>
   </div>
 );
 
@@ -843,11 +1102,11 @@ const SessionFinishedScreen = ({
   gameInfo,
   onLeaveRoom,
 }: {
-  gameInfo: GameInfo;
+  gameInfo: any;
   onLeaveRoom: () => void;
 }) => (
   <div className="max-w-4xl mx-auto mb-6">
-    <RetroCard title="🎊 Session Complete!">
+    <Card title="🎊 Session Complete!">
       <div className="space-y-6 text-center">
         <div className="text-6xl">🏆</div>
 
@@ -855,40 +1114,38 @@ const SessionFinishedScreen = ({
 
         {/* Final Leaderboard */}
         <div className="space-y-3">
-          {gameInfo.sessionLeaderboard.map(
-            (player: SessionLeaderboard, index: number) => (
-              <div
-                key={player.id}
-                className={`flex justify-between items-center py-4 px-6 rounded-2xl ${
-                  index === 0
-                    ? "bg-gradient-to-r from-yellow-200 to-yellow-300 border-2 border-yellow-400"
-                    : index === 1
-                      ? "bg-gradient-to-r from-gray-200 to-gray-300 border-2 border-gray-400"
-                      : index === 2
-                        ? "bg-gradient-to-r from-orange-200 to-orange-300 border-2 border-orange-400"
-                        : "bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">
-                    {index === 0 && "🥇"}
-                    {index === 1 && "🥈"}
-                    {index === 2 && "🥉"}
-                    {index > 2 && `${index + 1}.`}
-                  </span>
-                  <span className="font-bold text-lg">{player.name}</span>
+          {gameInfo.sessionLeaderboard.map((player: any, index: number) => (
+            <div
+              key={player.id}
+              className={`flex justify-between items-center py-4 px-6 rounded-2xl ${
+                index === 0
+                  ? "bg-gradient-to-r from-yellow-200 to-yellow-300 border-2 border-yellow-400"
+                  : index === 1
+                    ? "bg-gradient-to-r from-gray-200 to-gray-300 border-2 border-gray-400"
+                    : index === 2
+                      ? "bg-gradient-to-r from-orange-200 to-orange-300 border-2 border-orange-400"
+                      : "bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">
+                  {index === 0 && "🥇"}
+                  {index === 1 && "🥈"}
+                  {index === 2 && "🥉"}
+                  {index > 2 && `${index + 1}.`}
+                </span>
+                <span className="font-bold text-lg">{player.name}</span>
+              </div>
+              <div className="text-right">
+                <div className="font-bold text-xl">
+                  {player.sessionScore} pts
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-xl">
-                    {player.sessionScore} pts
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Rounds: {player.roundScores.join(", ")}
-                  </div>
+                <div className="text-sm text-gray-600">
+                  Rounds: {player.roundScores.join(", ")}
                 </div>
               </div>
-            ),
-          )}
+            </div>
+          ))}
         </div>
 
         <div className="pt-6 space-y-4">
@@ -896,17 +1153,17 @@ const SessionFinishedScreen = ({
             Thanks for playing! 🎉
           </p>
           <div className="space-x-4">
-            <RetroButton onClick={onLeaveRoom} variant="primary" size="lg">
+            <Button onClick={onLeaveRoom} variant="accent" size="lg">
               🚪 Leave Room
-            </RetroButton>
+            </Button>
             <Link href="/">
-              <RetroButton variant="secondary" size="lg">
+              <Button variant="secondary" size="lg">
                 🏠 Back to Menu
-              </RetroButton>
+              </Button>
             </Link>
           </div>
         </div>
       </div>
-    </RetroCard>
+    </Card>
   </div>
 );

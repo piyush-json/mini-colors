@@ -2,13 +2,20 @@
 
 import { useColorGame } from "@/lib/useColorGame";
 import { ColorSDK } from "@/lib/color-sdk";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { NormalGameScreen } from "./NormalGameScreen";
 import { ResultsScreen } from "./ResultsScreen";
 import { StatsScreen } from "./StatsScreen";
 import { GameHistoryScreen } from "./GameHistoryScreen";
-import { RetroButton } from "./RetroUI";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 
 type GameFlowState =
   | "welcome"
@@ -36,21 +43,12 @@ const ColorGame = () => {
     startDailyMode,
   } = useColorGame();
 
-  const [isMobile, setIsMobile] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false);
   const [overrideState, setOverrideState] = useState<GameFlowState | null>(
     null,
   );
 
-  // Mobile detection - only run on client side
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const checkMobile = () => setIsMobile(window.innerWidth < 768);
-      checkMobile();
-      window.addEventListener("resize", checkMobile);
-      return () => window.removeEventListener("resize", checkMobile);
-    }
-  }, []);
+  // Mobile detection functionality removed as it's not currently used
 
   // Compute game flow state
   const computedGameFlowState = useMemo((): GameFlowState => {
@@ -202,131 +200,149 @@ const ColorGame = () => {
 
     case "practice":
       return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-4">
+        <div className="min-h-screen bg-background p-4 font-mono">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-6">
-              <h1 className="font-mono text-3xl font-bold text-foreground mb-2">
-                🎮 Practice Mode
+              <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+                🎮 PRACTICE
+                <br />
+                <span className="text-accent">MODE</span>
               </h1>
-              <p className="font-mono text-lg text-foreground-muted">
-                Practice your color matching skills without a camera!
+              <p className="font-bold text-lg uppercase tracking-wide">
+                PRACTICE YOUR COLOR MATCHING SKILLS WITHOUT A CAMERA!
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              {gameState.isPlaying ? (
-                <div className="text-center space-y-6">
-                  <div>
-                    <h2 className="font-mono text-xl font-bold mb-4">
-                      Target Color
-                    </h2>
-                    <div
-                      className="w-32 h-32 mx-auto rounded-lg border-4 border-black shadow-lg"
-                      style={{ backgroundColor: gameState.targetColor }}
-                    />
-                    <p className="font-mono text-sm mt-2">
-                      {gameState.targetColor}
-                    </p>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>🎯 PRACTICE ARENA</CardTitle>
+                <CardDescription>
+                  SHARPEN YOUR DESTRUCTION SKILLS
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {gameState.isPlaying ? (
+                  <div className="text-center space-y-6">
+                    <div>
+                      <h2 className="font-black text-xl uppercase tracking-wide mb-4">
+                        TARGET COLOR
+                      </h2>
+                      <div
+                        className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+                        style={{ backgroundColor: gameState.targetColor }}
+                      />
+                      <p className="font-mono text-sm mt-2 font-bold uppercase">
+                        {gameState.targetColor}
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Button
+                        onClick={handleCaptureColor}
+                        variant="default"
+                        size="lg"
+                        disabled={isLoading}
+                        className="w-full"
+                      >
+                        {isLoading ? "🎯 CAPTURING..." : "🎯 CAPTURE COLOR"}
+                      </Button>
+
+                      <Button
+                        onClick={handleResetGame}
+                        variant="secondary"
+                        size="default"
+                        className="w-full"
+                      >
+                        🔄 NEW GAME
+                      </Button>
+                    </div>
                   </div>
+                ) : (
+                  <div className="text-center space-y-6">
+                    <div>
+                      <h2 className="font-black text-xl uppercase tracking-wide mb-4">
+                        TARGET COLOR
+                      </h2>
+                      <div
+                        className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+                        style={{
+                          backgroundColor: gameState.targetColor || "#ff0000",
+                        }}
+                      />
+                      <p className="font-mono text-sm mt-2 font-bold uppercase">
+                        {gameState.targetColor || "#ff0000"}
+                      </p>
+                    </div>
 
-                  <div className="space-y-4">
-                    <RetroButton
-                      onClick={handleCaptureColor}
-                      variant="primary"
-                      size="lg"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "🎯 Capturing..." : "🎯 Capture Color"}
-                    </RetroButton>
+                    <div className="space-y-4">
+                      <Button
+                        onClick={handleStartGame}
+                        variant="default"
+                        size="lg"
+                        className="w-full"
+                      >
+                        🚀 START PRACTICE GAME
+                      </Button>
 
-                    <RetroButton
-                      onClick={handleResetGame}
-                      variant="secondary"
-                      size="md"
-                    >
-                      🔄 New Game
-                    </RetroButton>
+                      <Button
+                        onClick={() =>
+                          setNewTargetColor(ColorSDK.generateRandomColor())
+                        }
+                        variant="secondary"
+                        size="default"
+                        className="w-full"
+                      >
+                        🎲 NEW COLOR
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center space-y-6">
-                  <div>
-                    <h2 className="font-mono text-xl font-bold mb-4">
-                      Target Color
-                    </h2>
-                    <div
-                      className="w-32 h-32 mx-auto rounded-lg border-4 border-black shadow-lg"
-                      style={{
-                        backgroundColor: gameState.targetColor || "#ff0000",
-                      }}
-                    />
-                    <p className="font-mono text-sm mt-2">
-                      {gameState.targetColor || "#ff0000"}
-                    </p>
-                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-                  <div className="space-y-4">
-                    <RetroButton
-                      onClick={handleStartGame}
-                      variant="primary"
-                      size="lg"
-                    >
-                      🚀 Start Practice Game
-                    </RetroButton>
-
-                    <RetroButton
-                      onClick={() =>
-                        setNewTargetColor(ColorSDK.generateRandomColor())
-                      }
-                      variant="secondary"
-                      size="md"
-                    >
-                      🎲 New Color
-                    </RetroButton>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="text-center">
-              <RetroButton
+            <div className="text-center mb-6">
+              <Button
                 onClick={handleBackToWelcome}
                 variant="secondary"
-                size="md"
+                size="default"
               >
-                ← Back to Welcome
-              </RetroButton>
+                ← BACK TO WELCOME
+              </Button>
             </div>
 
-            <div className="mt-6 text-center text-sm text-foreground-muted">
-              <p>
-                💡 In practice mode, you can visualize colors and practice your
-                color recognition skills.
-              </p>
-              <p>
-                🎯 Click &quot;Start Practice Game&quot; to begin, then
-                &quot;Capture Color&quot; to simulate finding the target color.
-              </p>
-            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center text-sm space-y-2">
+                  <p className="font-black uppercase tracking-wide">
+                    💡 IN PRACTICE MODE, YOU CAN VISUALIZE COLORS AND PRACTICE
+                    YOUR COLOR RECOGNITION SKILLS.
+                  </p>
+                  <p className="font-black uppercase tracking-wide">
+                    🎯 CLICK &quot;START PRACTICE GAME&quot; TO BEGIN, THEN
+                    &quot;CAPTURE COLOR&quot; TO SIMULATE FINDING THE TARGET
+                    COLOR.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       );
 
     default:
       return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-4 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-4xl mb-4">❓</div>
-            <p className="font-mono text-lg text-foreground-muted mb-4">
-              Something went wrong with the game flow
-            </p>
-            <button
-              onClick={handleBackToWelcome}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Back to Welcome
-            </button>
-          </div>
+        <div className="min-h-screen bg-background p-4 font-mono flex items-center justify-center">
+          <Card>
+            <CardContent className="text-center p-8">
+              <div className="text-4xl mb-4">❓</div>
+              <p className="font-black text-lg uppercase tracking-wide mb-4">
+                SOMETHING WENT WRONG WITH THE GAME FLOW
+              </p>
+              <Button onClick={handleBackToWelcome} variant="default" size="lg">
+                BACK TO WELCOME
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       );
   }

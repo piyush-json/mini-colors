@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useColorGame } from "@/lib/useColorGame";
 import { ColorSDK } from "@/lib/color-sdk";
-import { RetroButton, RetroCard, RetroColorSwatch, RetroSpinner } from "./RetroUI";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
 import Link from "next/link";
 
 export const PracticeModeScreen = () => {
@@ -19,15 +26,7 @@ export const PracticeModeScreen = () => {
     getTotalGames,
   } = useColorGame();
 
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Mobile detection
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  // Mobile detection functionality removed as it's not currently used
 
   const handleStartGame = () => {
     startGame();
@@ -50,156 +49,194 @@ export const PracticeModeScreen = () => {
   };
 
   return (
-    <div className="min-h-screen retro-bg-gradient-alt p-4">
+    <div className="min-h-screen bg-background p-4 font-mono">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4 retro-text-gradient-secondary">
-            🎮 Practice Mode
+          <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+            🎮 PRACTICE
+            <br />
+            <span className="text-accent">MODE</span>
           </h1>
-          <p className="text-xl text-foreground-muted">
-            Practice your color matching skills without a camera!
+          <p className="text-xl font-bold uppercase tracking-wide">
+            PRACTICE YOUR COLOR MATCHING SKILLS WITHOUT A CAMERA!
           </p>
           <div className="mt-4 space-x-4">
             <Link href="/">
-              <RetroButton variant="secondary" size="md">
-                ← Back to Menu
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                ← BACK TO MENU
+              </Button>
             </Link>
             <Link href="/stats">
-              <RetroButton variant="info" size="md">
-                📊 View Stats
-              </RetroButton>
+              <Button variant="outline" size="default">
+                📊 VIEW STATS
+              </Button>
             </Link>
           </div>
         </div>
 
-        <RetroCard title="🎯 Practice Game" className="mb-6">
-          {gameState.isPlaying ? (
-            <div className="text-center space-y-6">
-              <div>
-                <h2 className="text-xl font-bold mb-4">Target Color</h2>
-                <RetroColorSwatch
-                  color={gameState.targetColor}
-                  size="lg"
-                  showHex
-                  className="mx-auto"
-                />
-                <p className="font-mono text-sm mt-2">
-                  {gameState.targetColor}
-                </p>
-              </div>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>🎯 PRACTICE GAME</CardTitle>
+            <CardDescription>DESTRUCTION TRAINING ARENA</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {gameState.isPlaying ? (
+              <div className="text-center space-y-6">
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wide mb-4">
+                    TARGET COLOR
+                  </h2>
+                  <div
+                    className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+                    style={{ backgroundColor: gameState.targetColor }}
+                  />
+                  <p className="font-mono text-sm mt-2 font-black uppercase tracking-wide">
+                    {gameState.targetColor}
+                  </p>
+                </div>
 
-              <div className="space-y-4">
-                <RetroButton
-                  onClick={handleCaptureColor}
-                  variant="primary"
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center">
-                      <RetroSpinner className="mr-2" />
-                      Capturing...
-                    </span>
-                  ) : (
-                    "🎯 Capture Color"
-                  )}
-                </RetroButton>
+                <div className="space-y-4">
+                  <Button
+                    onClick={handleCaptureColor}
+                    variant="default"
+                    size="lg"
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    {isLoading ? "🎯 CAPTURING..." : "🎯 CAPTURE COLOR"}
+                  </Button>
 
-                <RetroButton
-                  onClick={handleResetGame}
-                  variant="secondary"
-                  size="md"
-                >
-                  🔄 New Game
-                </RetroButton>
+                  <Button
+                    onClick={handleResetGame}
+                    variant="secondary"
+                    size="default"
+                    className="w-full"
+                  >
+                    🔄 NEW GAME
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center space-y-6">
-              <div>
-                <h2 className="text-xl font-bold mb-4">Target Color</h2>
-                <RetroColorSwatch
-                  color={gameState.targetColor || "#ff0000"}
-                  size="lg"
-                  showHex
-                  className="mx-auto"
-                />
-                <p className="font-mono text-sm mt-2">
-                  {gameState.targetColor || "#ff0000"}
-                </p>
-              </div>
+            ) : (
+              <div className="text-center space-y-6">
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wide mb-4">
+                    TARGET COLOR
+                  </h2>
+                  <div
+                    className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+                    style={{
+                      backgroundColor: gameState.targetColor || "#ff0000",
+                    }}
+                  />
+                  <p className="font-mono text-sm mt-2 font-black uppercase tracking-wide">
+                    {gameState.targetColor || "#ff0000"}
+                  </p>
+                </div>
 
-              <div className="space-y-4">
-                <RetroButton
-                  onClick={handleStartGame}
-                  variant="primary"
-                  size="lg"
-                >
-                  🚀 Start Practice Game
-                </RetroButton>
+                <div className="space-y-4">
+                  <Button
+                    onClick={handleStartGame}
+                    variant="default"
+                    size="lg"
+                    className="w-full"
+                  >
+                    🚀 START PRACTICE GAME
+                  </Button>
 
-                <RetroButton
-                  onClick={handleNewColor}
-                  variant="secondary"
-                  size="md"
-                >
-                  🎲 New Color
-                </RetroButton>
+                  <Button
+                    onClick={handleNewColor}
+                    variant="secondary"
+                    size="default"
+                    className="w-full"
+                  >
+                    🎲 NEW COLOR
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </RetroCard>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Stats Display */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <RetroScoreDisplay
-            label="Best Score"
-            score={getBestScore()}
-            maxScore={100}
-          />
-          <RetroScoreDisplay
-            label="Average Score"
-            score={getAverageScore()}
-            maxScore={100}
-          />
-          <RetroScoreDisplay
-            label="Games Played"
-            score={getTotalGames()}
-            maxScore={getTotalGames()}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>🏆 BEST SCORE</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge
+                variant="success"
+                className="text-2xl w-full text-center p-4"
+              >
+                {getBestScore()}%
+              </Badge>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>📊 AVERAGE SCORE</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge
+                variant="outline"
+                className="text-2xl w-full text-center p-4"
+              >
+                {getAverageScore()}%
+              </Badge>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>🎮 GAMES PLAYED</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge
+                variant="accent"
+                className="text-2xl w-full text-center p-4"
+              >
+                {getTotalGames()}
+              </Badge>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Navigation */}
         <div className="text-center space-y-4">
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/daily">
-              <RetroButton variant="primary" size="md">
-                🌟 Daily Challenge
-              </RetroButton>
+              <Button variant="default" size="default">
+                🌟 DAILY CHALLENGE
+              </Button>
             </Link>
             <Link href="/party">
-              <RetroButton variant="secondary" size="md">
-                🎉 Party Mode
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                🎉 PARTY MODE
+              </Button>
             </Link>
             <Link href="/mixing">
-              <RetroButton variant="secondary" size="md">
-                🎨 Color Mixing
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                🎨 COLOR MIXING
+              </Button>
             </Link>
           </div>
         </div>
 
-        <div className="mt-6 text-center text-sm text-foreground-muted">
-          <p>
-            💡 In practice mode, you can visualize colors and practice your
-            color recognition skills.
-          </p>
-          <p>
-            🎯 Click "Start Practice Game" to begin, then "Capture Color" to
-            simulate finding the target color.
-          </p>
+        <div className="mt-6 text-center">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-2 text-sm">
+                <p className="font-black uppercase tracking-wide">
+                  💡 IN PRACTICE MODE, YOU CAN VISUALIZE COLORS AND PRACTICE
+                  YOUR COLOR RECOGNITION SKILLS.
+                </p>
+                <p className="font-black uppercase tracking-wide">
+                  🎯 CLICK &quot;START PRACTICE GAME&quot; TO BEGIN, THEN
+                  &quot;CAPTURE COLOR&quot; TO SIMULATE FINDING THE TARGET
+                  COLOR.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

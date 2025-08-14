@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useColorGame } from "@/lib/useColorGame";
-import { RetroButton, RetroCard, RetroColorSwatch } from "./RetroUI";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
 import Link from "next/link";
 
 export const GameHistoryScreen = () => {
@@ -12,7 +20,7 @@ export const GameHistoryScreen = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
-    let sorted = [...gameState.gameHistory];
+    const sorted = [...gameState.gameHistory];
 
     switch (sortBy) {
       case "date":
@@ -98,148 +106,176 @@ export const GameHistoryScreen = () => {
   };
 
   return (
-    <div className="min-h-screen retro-bg-gradient p-4">
+    <div className="min-h-screen bg-background p-4 font-mono">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4 retro-text-gradient-primary">
-            📜 Game History
+          <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+            📜 GAME
+            <br />
+            <span className="text-accent">HISTORY</span>
           </h1>
-          <p className="text-xl text-foreground-muted">
-            Review your color hunting journey and track your progress over time!
+          <p className="text-xl font-bold uppercase tracking-wide">
+            REVIEW YOUR COLOR HUNTING JOURNEY AND TRACK YOUR PROGRESS OVER TIME!
           </p>
           <div className="mt-4 space-x-4">
             <Link href="/">
-              <RetroButton variant="secondary" size="md">
-                ← Back to Menu
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                ← BACK TO MENU
+              </Button>
             </Link>
             <Link href="/stats">
-              <RetroButton variant="info" size="md">
-                📊 View Stats
-              </RetroButton>
+              <Button variant="outline" size="default">
+                📊 VIEW STATS
+              </Button>
             </Link>
           </div>
         </div>
 
         {/* History Summary */}
-        <RetroCard title="📊 History Summary" className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
-                {gameState.gameHistory.length}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>📊 HISTORY SUMMARY</CardTitle>
+            <CardDescription>DESTRUCTION STATISTICS</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+              <div className="p-4 border-4 border-foreground bg-muted shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                <Badge variant="outline" className="text-2xl mb-2">
+                  {gameState.gameHistory.length}
+                </Badge>
+                <div className="text-sm font-black uppercase tracking-wide">
+                  TOTAL GAMES
+                </div>
               </div>
-              <div className="text-sm text-blue-800">Total Games</div>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {gameState.gameHistory.length > 0
-                  ? Math.round(
-                      gameState.gameHistory.reduce(
-                        (sum, game) => sum + game.finalScore,
-                        0,
-                      ) / gameState.gameHistory.length,
-                    )
-                  : 0}
-                %
+              <div className="p-4 border-4 border-foreground bg-muted shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                <Badge variant="success" className="text-2xl mb-2">
+                  {gameState.gameHistory.length > 0
+                    ? Math.round(
+                        gameState.gameHistory.reduce(
+                          (sum, game) => sum + game.finalScore,
+                          0,
+                        ) / gameState.gameHistory.length,
+                      )
+                    : 0}
+                  %
+                </Badge>
+                <div className="text-sm font-black uppercase tracking-wide">
+                  AVERAGE SCORE
+                </div>
               </div>
-              <div className="text-sm text-green-800">Average Score</div>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">
-                {gameState.gameHistory.length > 0
-                  ? Math.round(
-                      gameState.gameHistory.reduce(
-                        (sum, game) => sum + game.timeTaken,
-                        0,
-                      ) /
-                        gameState.gameHistory.length /
-                        1000,
-                    )
-                  : 0}
-                s
+              <div className="p-4 border-4 border-foreground bg-muted shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                <Badge variant="accent" className="text-2xl mb-2">
+                  {gameState.gameHistory.length > 0
+                    ? Math.round(
+                        gameState.gameHistory.reduce(
+                          (sum, game) => sum + game.timeTaken,
+                          0,
+                        ) /
+                          gameState.gameHistory.length /
+                          1000,
+                      )
+                    : 0}
+                  S
+                </Badge>
+                <div className="text-sm font-black uppercase tracking-wide">
+                  AVERAGE TIME
+                </div>
               </div>
-              <div className="text-sm text-purple-800">Average Time</div>
-            </div>
-            <div className="p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">
-                {
-                  gameState.gameHistory.filter((game) => game.finalScore >= 80)
-                    .length
-                }
+              <div className="p-4 border-4 border-foreground bg-muted shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                <Badge variant="secondary" className="text-2xl mb-2">
+                  {
+                    gameState.gameHistory.filter(
+                      (game) => game.finalScore >= 80,
+                    ).length
+                  }
+                </Badge>
+                <div className="text-sm font-black uppercase tracking-wide">
+                  HIGH SCORES (80%+)
+                </div>
               </div>
-              <div className="text-sm text-orange-800">High Scores (80%+)</div>
             </div>
-          </div>
-        </RetroCard>
+          </CardContent>
+        </Card>
 
         {/* Sort Controls */}
-        <RetroCard title="🔍 Sort & Filter" className="mb-6">
-          <div className="flex flex-wrap gap-4 items-center justify-center">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium">Sort by:</span>
-              <div className="flex space-x-1">
-                {(["date", "score", "time"] as const).map((field) => (
-                  <button
-                    key={field}
-                    onClick={() => handleSort(field)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      sortBy === field
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {field === "date" && "📅 Date"}
-                    {field === "score" && "🎯 Score"}
-                    {field === "time" && "⏰ Time"}
-                  </button>
-                ))}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>🔍 SORT & FILTER</CardTitle>
+            <CardDescription>ORGANIZE YOUR DESTRUCTION HISTORY</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 items-center justify-center">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-black uppercase tracking-wide">
+                  SORT BY:
+                </span>
+                <div className="flex space-x-1">
+                  {(["date", "score", "time"] as const).map((field) => (
+                    <button
+                      key={field}
+                      onClick={() => handleSort(field)}
+                      className={`px-3 py-1 border-2 border-foreground font-mono font-black uppercase tracking-wide text-sm transition-all ${
+                        sortBy === field
+                          ? "bg-foreground text-background shadow-[2px_2px_0px_hsl(var(--background))]"
+                          : "bg-background text-foreground hover:translate-x-1 hover:translate-y-1 shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                      }`}
+                    >
+                      {field === "date" && "📅 DATE"}
+                      {field === "score" && "🎯 SCORE"}
+                      {field === "time" && "⏰ TIME"}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <button
+                onClick={() =>
+                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                }
+                className="px-3 py-1 bg-background border-2 border-foreground font-mono font-black uppercase tracking-wide text-sm hover:translate-x-1 hover:translate-y-1 shadow-[4px_4px_0px_hsl(var(--foreground))] transition-all"
+              >
+                {sortOrder === "asc" ? "⬆️ ASCENDING" : "⬇️ DESCENDING"}
+              </button>
+
+              <Button onClick={clearHistory} variant="destructive" size="sm">
+                🗑️ CLEAR HISTORY
+              </Button>
             </div>
-
-            <button
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
-            >
-              {sortOrder === "asc" ? "⬆️ Ascending" : "⬇️ Descending"}
-            </button>
-
-            <RetroButton
-              onClick={clearHistory}
-              variant="secondary"
-              size="sm"
-              className="text-red-600 hover:text-red-700"
-            >
-              🗑️ Clear History
-            </RetroButton>
-          </div>
-        </RetroCard>
+          </CardContent>
+        </Card>
 
         {/* Game History List */}
         {filteredHistory.length === 0 ? (
-          <RetroCard title="📝 No Games Yet" className="mb-6">
-            <div className="text-center space-y-4">
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>📝 NO GAMES YET</CardTitle>
+              <CardDescription>
+                YOUR DESTRUCTION HISTORY IS EMPTY
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
               <div className="text-6xl">🎮</div>
-              <p className="text-lg text-foreground-muted">
-                You haven't played any games yet!
+              <p className="text-lg font-bold uppercase tracking-wide">
+                YOU HAVEN&apos;T PLAYED ANY GAMES YET!
               </p>
-              <p className="text-sm text-foreground-muted">
-                Start playing to build up your game history and track your
-                progress.
+              <p className="text-sm font-bold uppercase tracking-wide">
+                START PLAYING TO BUILD UP YOUR GAME HISTORY AND TRACK YOUR
+                PROGRESS.
               </p>
               <div className="space-x-4">
                 <Link href="/daily">
-                  <RetroButton variant="primary" size="md">
-                    🌟 Daily Challenge
-                  </RetroButton>
+                  <Button variant="default" size="default">
+                    🌟 DAILY CHALLENGE
+                  </Button>
                 </Link>
                 <Link href="/practice">
-                  <RetroButton variant="secondary" size="md">
-                    🎯 Practice Mode
-                  </RetroButton>
+                  <Button variant="secondary" size="default">
+                    🎯 PRACTICE MODE
+                  </Button>
                 </Link>
               </div>
-            </div>
-          </RetroCard>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-4 mb-6">
             {filteredHistory.map((game, index) => (
@@ -350,33 +386,37 @@ export const GameHistoryScreen = () => {
         <div className="text-center space-y-4">
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/daily">
-              <RetroButton variant="primary" size="md">
-                🌟 Daily Challenge
-              </RetroButton>
+              <Button variant="default" size="default">
+                🌟 DAILY CHALLENGE
+              </Button>
             </Link>
             <Link href="/party">
-              <RetroButton variant="secondary" size="md">
-                🎉 Party Mode
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                🎉 PARTY MODE
+              </Button>
             </Link>
             <Link href="/mixing">
-              <RetroButton variant="secondary" size="md">
-                🎨 Color Mixing
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                🎨 COLOR MIXING
+              </Button>
             </Link>
             <Link href="/practice">
-              <RetroButton variant="secondary" size="md">
-                🎯 Practice Mode
-              </RetroButton>
+              <Button variant="secondary" size="default">
+                🎯 PRACTICE MODE
+              </Button>
             </Link>
           </div>
         </div>
 
-        <div className="mt-8 text-center text-sm text-foreground-muted">
-          <p>
-            💡 <strong>Tip:</strong> Use the sort options to analyze your
-            performance patterns!
-          </p>
+        <div className="mt-8 text-center">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm font-mono font-black uppercase tracking-wide">
+                💡 <strong>TIP:</strong> USE THE SORT OPTIONS TO ANALYZE YOUR
+                PERFORMANCE PATTERNS!
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

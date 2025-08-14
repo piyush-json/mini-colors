@@ -1,11 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RetroButton, RetroCard, RetroColorSwatch, RetroSpinner } from "./RetroUI";
 import Link from "next/link";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
 
 // Utility functions for color mixing
-const mixColors = (color1: string, color2: string, proportion1: number, proportion2: number): string => {
+const mixColors = (
+  color1: string,
+  color2: string,
+  proportion1: number,
+  proportion2: number,
+): string => {
   const total = proportion1 + proportion2;
   const ratio1 = proportion1 / total;
   const ratio2 = proportion2 / total;
@@ -13,11 +26,13 @@ const mixColors = (color1: string, color2: string, proportion1: number, proporti
   // Convert hex to RGB
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
   };
 
   const rgb1 = hexToRgb(color1);
@@ -42,11 +57,13 @@ const mixColors = (color1: string, color2: string, proportion1: number, proporti
 const calculateColorAccuracy = (color1: string, color2: string): number => {
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
   };
 
   const rgb1 = hexToRgb(color1);
@@ -59,7 +76,9 @@ const calculateColorAccuracy = (color1: string, color2: string): number => {
   const deltaG = rgb1.g - rgb2.g;
   const deltaB = rgb1.b - rgb2.b;
 
-  const distance = Math.sqrt(deltaR * deltaR + deltaG * deltaG + deltaB * deltaB);
+  const distance = Math.sqrt(
+    deltaR * deltaR + deltaG * deltaG + deltaB * deltaB,
+  );
   const maxDistance = Math.sqrt(255 * 255 + 255 * 255 + 255 * 255);
 
   // Convert to percentage (100% = perfect match, 0% = completely different)
@@ -82,8 +101,18 @@ export const ColorMixingScreen = () => {
   // Generate a new target color
   const generateTargetColor = () => {
     const colors = [
-      "#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff",
-      "#ff8000", "#8000ff", "#00ff80", "#ff0080", "#80ff00", "#0080ff"
+      "#ff0000",
+      "#00ff00",
+      "#0000ff",
+      "#ffff00",
+      "#ff00ff",
+      "#00ffff",
+      "#ff8000",
+      "#8000ff",
+      "#00ff80",
+      "#ff0080",
+      "#80ff00",
+      "#0080ff",
     ];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     setTargetColor(randomColor);
@@ -102,15 +131,15 @@ export const ColorMixingScreen = () => {
   // Mix colors and calculate score
   const handleMixColors = () => {
     setIsLoading(true);
-    
+
     setTimeout(() => {
       const result = mixColors(color1, color2, proportion1, proportion2);
       setMixedResult(result);
-      
+
       const accuracy = calculateColorAccuracy(result, targetColor);
       const timeBonus = Math.max(0, 100 - timer * 2); // Time penalty
       const finalScore = Math.round((accuracy + timeBonus) / 2);
-      
+
       setScore(finalScore);
       setShowResult(true);
       setIsLoading(false);
@@ -131,32 +160,32 @@ export const ColorMixingScreen = () => {
     let interval: NodeJS.Timeout;
     if (isPlaying && !showResult) {
       interval = setInterval(() => {
-        setTimer(prev => prev + 1);
+        setTimer((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isPlaying, showResult]);
 
   return (
-    <div className="min-h-screen retro-bg-gradient-alt p-4">
+    <div className="min-h-screen bg-background p-4 font-mono">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4 retro-text-gradient-secondary">
-            🎨 Color Mixing Challenge
+          <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
+            🎨 COLOR
+            <br />
+            <span className="text-accent">MIXING</span>
+            <br />
+            <span className="text-destructive">CHALLENGE</span>
           </h1>
-          <p className="text-xl text-foreground-muted">
-            Mix two colors in perfect proportions to match the target color!
+          <p className="text-xl font-bold uppercase tracking-wide">
+            MIX TWO COLORS IN PERFECT PROPORTIONS TO MATCH THE TARGET COLOR!
           </p>
           <div className="mt-4 space-x-4">
             <Link href="/">
-              <RetroButton variant="secondary" size="md">
-                ← Back to Menu
-              </RetroButton>
+              <Button variant="secondary">← BACK TO MENU</Button>
             </Link>
             <Link href="/daily">
-              <RetroButton variant="primary" size="md">
-                🌟 Daily Challenge
-              </RetroButton>
+              <Button variant="default">🌟 DAILY CHALLENGE</Button>
             </Link>
           </div>
         </div>
@@ -164,114 +193,141 @@ export const ColorMixingScreen = () => {
         {/* Result Overlay */}
         {showResult && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
-              <h2 className="text-2xl font-bold mb-4">🎯 Your Result!</h2>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Score:</span>
-                  <span className={`text-2xl font-bold ${
-                    score >= 80 ? 'text-green-600' :
-                    score >= 60 ? 'text-yellow-600' :
-                    score >= 40 ? 'text-orange-600' : 'text-red-600'
-                  }`}>
-                    {score}%
+            <Card className="max-w-md mx-4">
+              <CardHeader>
+                <CardTitle>🎯 YOUR RESULT!</CardTitle>
+                <CardDescription>DESTRUCTION COMPLETE</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center p-2 border-2 border-foreground bg-muted">
+                  <span className="font-black uppercase tracking-wide">
+                    SCORE:
                   </span>
+                  <Badge
+                    variant={
+                      score >= 80
+                        ? "success"
+                        : score >= 60
+                          ? "accent"
+                          : score >= 40
+                            ? "secondary"
+                            : "destructive"
+                    }
+                    className="text-2xl"
+                  >
+                    {score}%
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Time:</span>
-                  <span>{timer}s</span>
+                <div className="flex justify-between items-center p-2 border-2 border-foreground bg-muted">
+                  <span className="font-black uppercase tracking-wide">
+                    TIME:
+                  </span>
+                  <Badge variant="outline">{timer}S</Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Target:</span>
-                  <RetroColorSwatch color={targetColor} size="sm" />
+                <div className="flex justify-between items-center p-2 border-2 border-foreground bg-muted">
+                  <span className="font-black uppercase tracking-wide">
+                    TARGET:
+                  </span>
+                  <div
+                    className="w-8 h-8 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                    style={{ backgroundColor: targetColor }}
+                  />
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Your Mix:</span>
-                  <RetroColorSwatch color={mixedResult} size="sm" />
+                <div className="flex justify-between items-center p-2 border-2 border-foreground bg-muted">
+                  <span className="font-black uppercase tracking-wide">
+                    YOUR MIX:
+                  </span>
+                  <div
+                    className="w-8 h-8 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                    style={{ backgroundColor: mixedResult }}
+                  />
                 </div>
-              </div>
-              <div className="mt-6 space-y-2">
-                <RetroButton onClick={handleNewGame} variant="primary" size="lg" className="w-full">
-                  🎮 New Game
-                </RetroButton>
-              </div>
-            </div>
+                <Button
+                  onClick={handleNewGame}
+                  size="lg"
+                  className="w-full mt-6"
+                >
+                  🎮 NEW GAME
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Target Color Card */}
-          <RetroCard title="Target Color">
-            <div className="text-center space-y-4">
-              <RetroColorSwatch
-                color={targetColor}
-                size="lg"
-                showHex
-                className="mx-auto"
+          <Card>
+            <CardHeader>
+              <CardTitle>🎯 TARGET COLOR</CardTitle>
+              <CardDescription>MATCH THIS DESTRUCTION</CardDescription>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <div
+                className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+                style={{ backgroundColor: targetColor }}
               />
-              <p className="font-mono text-sm text-foreground-muted">
+              <p className="font-mono text-sm font-black uppercase tracking-wide">
                 {targetColor}
               </p>
-              
+
               {isPlaying && (
                 <div className="space-y-2">
-                  <div className="font-mono text-sm font-bold text-foreground-muted">
-                    Time: {timer}s
-                  </div>
-                  <RetroButton
+                  <Badge variant="outline" className="text-lg">
+                    TIME: {timer}S
+                  </Badge>
+                  <Button
                     onClick={handleMixColors}
-                    variant="success"
+                    variant="default"
                     size="lg"
                     className="w-full"
                     disabled={isLoading}
                   >
-                    {isLoading ? (
-                      <span className="flex items-center justify-center">
-                        <RetroSpinner className="mr-2" />
-                        Mixing...
-                      </span>
-                    ) : (
-                      "🎨 Mix Colors"
-                    )}
-                  </RetroButton>
+                    {isLoading ? "🎨 MIXING..." : "🎨 MIX COLORS"}
+                  </Button>
                 </div>
               )}
 
               {!isPlaying && (
-                <RetroButton onClick={handleStartGame} variant="primary" size="lg" className="w-full">
-                  🚀 Start Mixing Game
-                </RetroButton>
+                <Button onClick={handleStartGame} size="lg" className="w-full">
+                  🚀 START MIXING GAME
+                </Button>
               )}
-            </div>
-          </RetroCard>
+            </CardContent>
+          </Card>
 
           {/* Color Mixer Card */}
-          <RetroCard title="Color Mixer">
-            <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>🎨 COLOR MIXER</CardTitle>
+              <CardDescription>DESTRUCTION LABORATORY</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               {/* Color 1 */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-foreground">
-                  Color 1
+                <label className="block text-sm font-black uppercase tracking-wide">
+                  COLOR 1
                 </label>
                 <div className="flex items-center space-x-3">
                   <input
                     type="color"
                     value={color1}
                     onChange={(e) => setColor1(e.target.value)}
-                    className="w-16 h-16 rounded border-2 border-gray-300"
+                    className="w-16 h-16 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
                     disabled={isPlaying}
                   />
                   <input
                     type="text"
                     value={color1}
                     onChange={(e) => setColor1(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm"
-                    placeholder="#ff0000"
+                    className="flex-1 p-3 border-4 border-foreground bg-background font-mono font-black uppercase tracking-wide shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                    placeholder="#FF0000"
                     disabled={isPlaying}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-foreground-muted">Proportion:</span>
+                  <span className="text-sm font-black uppercase tracking-wide">
+                    PROPORTION:
+                  </span>
                   <input
                     type="range"
                     min="0"
@@ -285,34 +341,38 @@ export const ColorMixingScreen = () => {
                     className="flex-1"
                     disabled={isPlaying}
                   />
-                  <span className="text-sm font-mono w-12">{proportion1}%</span>
+                  <Badge variant="outline" className="w-16 text-center">
+                    {proportion1}%
+                  </Badge>
                 </div>
               </div>
 
               {/* Color 2 */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-foreground">
-                  Color 2
+                <label className="block text-sm font-black uppercase tracking-wide">
+                  COLOR 2
                 </label>
                 <div className="flex items-center space-x-3">
                   <input
                     type="color"
                     value={color2}
                     onChange={(e) => setColor2(e.target.value)}
-                    className="w-16 h-16 rounded border-2 border-gray-300"
+                    className="w-16 h-16 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
                     disabled={isPlaying}
                   />
                   <input
                     type="text"
                     value={color2}
                     onChange={(e) => setColor2(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded font-mono text-sm"
-                    placeholder="#0000ff"
+                    className="flex-1 p-3 border-4 border-foreground bg-background font-mono font-black uppercase tracking-wide shadow-[4px_4px_0px_hsl(var(--foreground))]"
+                    placeholder="#0000FF"
                     disabled={isPlaying}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-foreground-muted">Proportion:</span>
+                  <span className="text-sm font-black uppercase tracking-wide">
+                    PROPORTION:
+                  </span>
                   <input
                     type="range"
                     min="0"
@@ -326,84 +386,114 @@ export const ColorMixingScreen = () => {
                     className="flex-1"
                     disabled={isPlaying}
                   />
-                  <span className="text-sm font-mono w-12">{proportion2}%</span>
+                  <Badge variant="outline" className="w-16 text-center">
+                    {proportion2}%
+                  </Badge>
                 </div>
               </div>
 
               {/* Mixed Result Preview */}
               {!isPlaying && (
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-foreground">
-                    Mixed Result Preview
+                  <label className="block text-sm font-black uppercase tracking-wide">
+                    MIXED RESULT PREVIEW
                   </label>
                   <div className="text-center">
-                    <RetroColorSwatch
-                      color={mixColors(color1, color2, proportion1, proportion2)}
-                      size="lg"
-                      showHex
-                      className="mx-auto"
+                    <div
+                      className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
+                      style={{
+                        backgroundColor: mixColors(
+                          color1,
+                          color2,
+                          proportion1,
+                          proportion2,
+                        ),
+                      }}
                     />
-                    <p className="font-mono text-sm mt-2 text-foreground-muted">
+                    <p className="font-mono text-sm mt-2 font-black uppercase tracking-wide">
                       {mixColors(color1, color2, proportion1, proportion2)}
                     </p>
                   </div>
                 </div>
               )}
-            </div>
-          </RetroCard>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Instructions */}
-        <RetroCard title="🎯 How to Play" className="mb-6">
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-500 font-bold">1.</span>
-              <p>Look at the target color you need to create</p>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>🎯 HOW TO PLAY</CardTitle>
+            <CardDescription>DESTRUCTION INSTRUCTIONS</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm font-mono">
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="min-w-6 text-center">
+                  1
+                </Badge>
+                <p className="font-black uppercase tracking-wide">
+                  LOOK AT THE TARGET COLOR YOU NEED TO CREATE
+                </p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="min-w-6 text-center">
+                  2
+                </Badge>
+                <p className="font-black uppercase tracking-wide">
+                  CHOOSE TWO COLORS TO MIX TOGETHER
+                </p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="min-w-6 text-center">
+                  3
+                </Badge>
+                <p className="font-black uppercase tracking-wide">
+                  ADJUST THE PROPORTIONS OF EACH COLOR
+                </p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="min-w-6 text-center">
+                  4
+                </Badge>
+                <p className="font-black uppercase tracking-wide">
+                  MIX THE COLORS AND SEE HOW CLOSE YOU GET!
+                </p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="min-w-6 text-center">
+                  5
+                </Badge>
+                <p className="font-black uppercase tracking-wide">
+                  FASTER COMPLETION TIME GIVES BONUS POINTS
+                </p>
+              </div>
             </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-500 font-bold">2.</span>
-              <p>Choose two colors to mix together</p>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-500 font-bold">3.</span>
-              <p>Adjust the proportions of each color</p>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-500 font-bold">4.</span>
-              <p>Mix the colors and see how close you get!</p>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-500 font-bold">5.</span>
-              <p>Faster completion time gives bonus points</p>
-            </div>
-          </div>
-        </RetroCard>
+          </CardContent>
+        </Card>
 
         {/* Navigation */}
         <div className="text-center space-y-4">
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/daily">
-              <RetroButton variant="primary" size="md">
-                🌟 Daily Challenge
-              </RetroButton>
+              <Button variant="default">🌟 DAILY CHALLENGE</Button>
             </Link>
             <Link href="/party">
-              <RetroButton variant="secondary" size="md">
-                🎉 Party Mode
-              </RetroButton>
+              <Button variant="secondary">🎉 PARTY MODE</Button>
             </Link>
             <Link href="/practice">
-              <RetroButton variant="secondary" size="md">
-                🎯 Practice Mode
-              </RetroButton>
+              <Button variant="secondary">🎯 PRACTICE MODE</Button>
             </Link>
           </div>
         </div>
 
-        <div className="mt-6 text-center text-sm text-foreground-muted">
-          <p>
-            💡 <strong>Tip:</strong> Use the preview to see how your color mix will look before submitting!
-          </p>
+        <div className="mt-6 text-center">
+          <div className="p-4 border-4 border-foreground bg-muted shadow-[8px_8px_0px_hsl(var(--foreground))]">
+            <p className="text-sm font-mono font-black uppercase tracking-wide">
+              💡 <strong>TIP:</strong> USE THE PREVIEW TO SEE HOW YOUR COLOR MIX
+              WILL LOOK BEFORE SUBMITTING!
+            </p>
+          </div>
         </div>
       </div>
     </div>
