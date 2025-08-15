@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { ColorSDK, ColorMatch, GameState } from "./color-sdk";
 import Webcam from "react-webcam";
 
@@ -50,28 +50,31 @@ export const useColorGame = () => {
     setError(null);
   }, []);
 
-  const handleWebcamError = useCallback((error: any) => {
-    setWebcamReady(false);
-    let message = "Camera initialization failed.";
+  const handleWebcamError = useCallback(
+    (error: { name: string; message: string }) => {
+      setWebcamReady(false);
+      let message = "Camera initialization failed.";
 
-    if (error.name === "NotAllowedError") {
-      message =
-        "Camera access denied. Please allow camera permissions and refresh the page.";
-    } else if (error.name === "NotFoundError") {
-      message = "No camera found on this device.";
-    } else if (error.name === "NotReadableError") {
-      message =
-        "Camera is in use by another application. Please close other apps using the camera.";
-    } else if (error.name === "OverconstrainedError") {
-      message =
-        "Camera doesn't support the required resolution. Please try a different camera.";
-    } else if (error.name === "SecurityError") {
-      message =
-        "Camera access blocked for security reasons. Please check your browser settings.";
-    }
+      if (error.name === "NotAllowedError") {
+        message =
+          "Camera access denied. Please allow camera permissions and refresh the page.";
+      } else if (error.name === "NotFoundError") {
+        message = "No camera found on this device.";
+      } else if (error.name === "NotReadableError") {
+        message =
+          "Camera is in use by another application. Please close other apps using the camera.";
+      } else if (error.name === "OverconstrainedError") {
+        message =
+          "Camera doesn't support the required resolution. Please try a different camera.";
+      } else if (error.name === "SecurityError") {
+        message =
+          "Camera access blocked for security reasons. Please check your browser settings.";
+      }
 
-    setError(message);
-  }, []);
+      setError(message);
+    },
+    [],
+  );
 
   const startGame = useCallback(() => {
     if (gameState.practiceMode) {
@@ -248,22 +251,46 @@ export const useColorGame = () => {
         endGame();
       }, 3000);
 
-      // If it's daily mode and score is better, send to leaderboard
-      if (gameState.dailyMode && result.finalScore > gameState.bestScore) {
+      // If it's daily mode, save to database (which will auto-submit to leaderboard)
+      if (gameState.dailyMode) {
         try {
-          await fetch("/api/leaderboard", {
+          // First, save the game attempt to get an attemptId
+          const attemptResponse = await fetch("/api/game/attempt", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              name: "Anonymous", // You could add a name input later
-              score: result.finalScore,
+              gameMode: "daily",
+              targetColor: gameState.targetColor,
+              capturedColor: hexColor,
+              similarity: result.similarity,
+              timeTaken: result.timeTaken / 1000, // Convert to seconds
+              timeScore: result.timeScore,
+              finalScore: result.finalScore,
               date: new Date().toISOString().split("T")[0],
             }),
           });
+
+          if (attemptResponse.ok) {
+            const attemptData = await attemptResponse.json();
+
+            // Update daily stats with the attemptId (this will auto-submit to leaderboard if new best)
+            await fetch("/api/daily/stats", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                score: result.finalScore,
+                date: new Date().toISOString().split("T")[0],
+                timeTaken: result.timeTaken / 1000,
+                attemptId: attemptData.attemptId,
+              }),
+            });
+          }
         } catch (error) {
-          console.error("Failed to send score to leaderboard:", error);
+          console.error("Failed to save game attempt:", error);
         }
       }
     } catch (error) {
@@ -328,7 +355,7 @@ export const useColorGame = () => {
       } else {
         setError("Failed to load daily color");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to load daily color");
     }
   }, []);

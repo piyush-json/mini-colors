@@ -110,12 +110,40 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     [sdk],
   );
 
-  const handleMix = useCallback(() => {
+  const handleMix = useCallback(async () => {
     const attempt = sdk.submitMix();
 
     // In multiplayer mode, submit score to server
     if (isMultiplayer && onScoreSubmit && attempt) {
       onScoreSubmit(attempt.matchPercentage, attempt.timeTaken);
+    }
+
+    // In single-player mode, save attempt to database
+    if (!isMultiplayer && attempt) {
+      try {
+        // Convert ColorRGB objects to hex strings
+        const targetColorHex = `#${attempt.targetColor.r.toString(16).padStart(2, "0")}${attempt.targetColor.g.toString(16).padStart(2, "0")}${attempt.targetColor.b.toString(16).padStart(2, "0")}`;
+        const mixedColorHex = `#${attempt.mixedColor.r.toString(16).padStart(2, "0")}${attempt.mixedColor.g.toString(16).padStart(2, "0")}${attempt.mixedColor.b.toString(16).padStart(2, "0")}`;
+
+        await fetch("/api/game/attempt", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            gameMode: "mixing",
+            targetColor: targetColorHex,
+            capturedColor: mixedColorHex,
+            similarity: attempt.matchPercentage,
+            timeTaken: attempt.timeTaken,
+            timeScore: 0, // Mixing game doesn't have time scoring
+            finalScore: attempt.matchPercentage,
+            date: new Date().toISOString().split("T")[0],
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to save mixing game attempt:", error);
+      }
     }
 
     return attempt;

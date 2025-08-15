@@ -1,30 +1,24 @@
 import { NextResponse } from "next/server";
+import {
+  getLeaderboard,
+  submitToLeaderboard,
+  createOrGetUser,
+  getUserKey,
+} from "@/db/queries";
 
-// In-memory storage for demo purposes
-// In production, you'd use a database
-let leaderboard: Array<{
-  id: string;
-  name: string;
-  score: number;
-  date: string;
-  timestamp: number;
-}> = [];
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Sort by score (highest first) and then by timestamp (earliest first for same scores)
-    const sortedLeaderboard = [...leaderboard].sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      return a.timestamp - b.timestamp;
-    });
+    const url = new URL(request.url);
+    const date = url.searchParams.get("date");
+
+    const leaderboard = await getLeaderboard(date || undefined);
 
     return NextResponse.json({
-      leaderboard: sortedLeaderboard.slice(0, 100), // Top 100 scores
+      leaderboard,
       total: leaderboard.length,
     });
   } catch (error) {
+    console.error("Failed to get leaderboard:", error);
     return NextResponse.json(
       { error: "Failed to get leaderboard" },
       { status: 500 },
@@ -34,30 +28,41 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, score, date } = await request.json();
+    const { name, score, date, attemptId } = await request.json();
 
-    if (!name || typeof score !== "number" || !date) {
+    if (!name || typeof score !== "number" || !date || !attemptId) {
       return NextResponse.json(
-        { error: "Invalid data provided" },
+        {
+          error:
+            "Invalid data provided. Name, score, date, and attemptId are required.",
+        },
         { status: 400 },
       );
     }
 
-    const newEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: name.trim(),
+    const userKey = getUserKey(request);
+
+    // Create or get user
+    const userId = await createOrGetUser(userKey, name.trim());
+
+    // Submit to leaderboard (this handles checking for existing entries and updates)
+    const result = await submitToLeaderboard(
+      userId,
+      name.trim(),
       score,
       date,
-      timestamp: Date.now(),
-    };
-
-    leaderboard.push(newEntry);
+      attemptId, // Use the provided attemptId which should be a valid UUID
+    );
 
     return NextResponse.json({
-      message: "Score added to leaderboard",
-      entry: newEntry,
+      message: result.updated
+        ? "Score updated on leaderboard"
+        : "Score added to leaderboard",
+      entry: result.entry,
+      updated: result.updated,
     });
   } catch (error) {
+    console.error("Failed to add score to leaderboard:", error);
     return NextResponse.json(
       { error: "Failed to add score to leaderboard" },
       { status: 500 },
