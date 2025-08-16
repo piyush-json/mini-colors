@@ -8,6 +8,7 @@ interface GameResults {
   targetColor: string;
   capturedColor: string;
   similarity: number;
+  mode: "daily" | "practice";
 }
 
 export default function ResultsPage() {
@@ -19,12 +20,14 @@ export default function ResultsPage() {
     const targetColor = searchParams.get("targetColor");
     const capturedColor = searchParams.get("capturedColor");
     const similarity = searchParams.get("similarity");
+    const mode = (searchParams.get("mode") as "daily" | "practice") || "daily";
 
     if (targetColor && capturedColor && similarity) {
       setResults({
         targetColor,
         capturedColor,
         similarity: parseInt(similarity),
+        mode,
       });
     } else {
       router.push("/game");
@@ -60,6 +63,11 @@ export default function ResultsPage() {
     router.push("/game");
   };
 
+  const handleAttemptAgain = () => {
+    // Navigate back to game in practice mode
+    router.push("/game?mode=practice");
+  };
+
   if (!results) {
     return (
       <div className="min-h-screen bg-[#FFFFE7] flex items-center justify-center">
@@ -75,9 +83,11 @@ export default function ResultsPage() {
       targetColor={results.targetColor}
       capturedColor={results.capturedColor}
       similarity={results.similarity}
+      mode={results.mode}
       onShare={handleShare}
       onMint={handleMint}
       onContinue={handleContinue}
+      onAttemptAgain={handleAttemptAgain}
     />
   );
 }

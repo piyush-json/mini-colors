@@ -21,6 +21,13 @@ export interface GameState {
   dailyMode: boolean;
   attempts: number;
   bestScore: number;
+  gameMode: "daily" | "practice";
+}
+
+export interface DailyColorResponse {
+  color: string;
+  date: string;
+  message: string;
 }
 
 export class ColorSDK {
@@ -230,5 +237,26 @@ export class ColorSDK {
       (255 - g).toString(16).padStart(2, "0") +
       (255 - b).toString(16).padStart(2, "0")
     );
+  }
+
+  /**
+   * Fetch daily color from API
+   */
+  static async fetchDailyColor(): Promise<DailyColorResponse> {
+    const response = await fetch("/api/daily");
+    if (!response.ok) {
+      throw new Error("Failed to fetch daily color");
+    }
+    return response.json();
+  }
+
+  /**
+   * Get random practice color
+   */
+  static getRandomPracticeColor(): string {
+    const r = Math.random() * 256;
+    const g = Math.random() * 256;
+    const b = Math.random() * 256;
+    return `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
   }
 }

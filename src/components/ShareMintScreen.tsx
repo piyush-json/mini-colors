@@ -7,9 +7,11 @@ interface ShareMintScreenProps {
   targetColor: string;
   capturedColor: string;
   similarity: number;
+  mode: "daily" | "practice";
   onShare: () => void;
   onMint: () => void;
   onContinue: () => void;
+  onAttemptAgain: () => void;
   className?: string;
 }
 
@@ -17,9 +19,11 @@ export const ShareMintScreen = ({
   targetColor,
   capturedColor,
   similarity,
+  mode,
   onShare,
   onMint,
   onContinue,
+  onAttemptAgain,
   className,
 }: ShareMintScreenProps) => {
   return (
@@ -29,8 +33,15 @@ export const ShareMintScreen = ({
           YOU FOUND IT!
         </h1>
         <p className="font-sintony text-sm font-normal text-black text-center">
-          You made the colours, let&apos;s share it!
+          {mode === "daily"
+            ? "You completed today's challenge!"
+            : "You made the colours, let's share it!"}
         </p>
+        {mode === "daily" && (
+          <p className="font-sintony text-xs font-normal text-gray-600 text-center mt-1">
+            Come back tomorrow for a new challenge!
+          </p>
+        )}
       </div>
 
       <div
@@ -221,6 +232,19 @@ export const ShareMintScreen = ({
         >
           SHARE
         </button>
+
+        {mode === "practice" && (
+          <button
+            className="w-full h-[51px] bg-[#4ECDC4] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[24px] font-normal text-black"
+            style={{
+              boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
+              letterSpacing: "7.5%",
+            }}
+            onClick={onAttemptAgain}
+          >
+            ATTEMPT AGAIN
+          </button>
+        )}
 
         <button
           className="w-full h-[51px] bg-white border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal text-black"

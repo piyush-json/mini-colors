@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useGameContextRequired } from "@/lib/GameContext";
 import { cn } from "@/lib/utils";
 interface FindColorGameProps {
-  targetColor: string;
+  targetColor?: string | null;
   onScoreSubmit: (score: number, timeTaken: number) => void;
   isMultiplayer?: boolean;
   className?: string;
@@ -36,7 +36,9 @@ export const FindColorGame = ({
   } = useGameContextRequired();
 
   useEffect(() => {
-    initializeGame(targetColor, isMultiplayer);
+    if (targetColor) {
+      initializeGame(targetColor, isMultiplayer);
+    }
   }, [targetColor, isMultiplayer, initializeGame]);
 
   return (
@@ -44,12 +46,21 @@ export const FindColorGame = ({
       {/* Target Color Display */}
       <div className="flex flex-col items-center gap-4">
         <div
-          className="w-[373px] h-[88px] border border-black rounded-[12px]"
+          className="w-[373px] h-[88px] border border-black rounded-[12px] flex items-center justify-center"
           style={{
-            backgroundColor: targetColor,
+            backgroundColor: targetColor || "#f0f0f0",
             boxShadow: "0px 6px 0px 0px rgba(0, 0, 0, 1)",
           }}
-        />
+        >
+          {!targetColor && (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+              <span className="font-sintony text-sm text-black">
+                Loading...
+              </span>
+            </div>
+          )}
+        </div>
         <p className="font-sintony text-sm font-bold text-black">
           Target colour
         </p>

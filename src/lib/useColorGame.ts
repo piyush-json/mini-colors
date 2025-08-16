@@ -19,6 +19,11 @@ export interface UseColorGameReturn {
   gameStage: "initial" | "camera" | "captured";
   cameraError: string | null;
 
+  // Game mode management
+  currentMode: "daily" | "practice";
+  isLoadingDailyColor: boolean;
+  dailyColor: string | null;
+
   // Find Color Game methods
   initializeGame: (targetColor: string, isMultiplayer?: boolean) => void;
   openCamera: () => void;
@@ -31,29 +36,52 @@ export interface UseColorGameReturn {
   handleWebcamReady: () => void;
   handleWebcamError: (error: string | DOMException) => void;
 
+  // Mode management methods
+  setDailyMode: () => void;
+  setPracticeMode: () => void;
+  loadDailyColor: () => Promise<void>;
+  generateNewPracticeColor: () => void;
+
   // Timer management
   startTimer: () => void;
   stopTimer: () => void;
   updateTimer: (newTime: number) => void;
 }
 
-export const useColorGame = (): UseColorGameReturn => {
+interface UseColorGameOptions {
+  initialMode?: "daily" | "practice";
+}
+
+export const useColorGame = (
+  options?: UseColorGameOptions,
+): UseColorGameReturn => {
+  const initialMode = options?.initialMode || "practice";
+
   const [gameState, setGameState] = useState<GameState>({
     isPlaying: false,
-    targetColor: "",
+    targetColor:
+      initialMode === "practice" ? ColorSDK.getRandomPracticeColor() : "",
     startTime: 0,
     score: 0,
     gameHistory: [],
-    practiceMode: false,
-    dailyMode: false,
+    practiceMode: initialMode === "practice",
+    dailyMode: initialMode === "daily",
     attempts: 0,
     bestScore: 0,
+    gameMode: initialMode,
   });
 
   const [timer, setTimer] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webcamReady, setWebcamReady] = useState(false);
+
+  // Game mode specific state
+  const [currentMode, setCurrentMode] = useState<"daily" | "practice">(
+    initialMode,
+  );
+  const [isLoadingDailyColor, setIsLoadingDailyColor] = useState(false);
+  const [dailyColor, setDailyColor] = useState<string | null>(null);
 
   // Find Color Game specific state
   const [gameFinished, setGameFinished] = useState(false);
@@ -315,6 +343,54 @@ export const useColorGame = (): UseColorGameReturn => {
     setGameState((prev) => ({ ...prev, targetColor: randomColor }));
   }, []);
 
+  // Mode management methods
+  const setDailyMode = useCallback(() => {
+    setCurrentMode("daily");
+    setGameState((prev) => ({
+      ...prev,
+      gameMode: "daily",
+      dailyMode: true,
+      practiceMode: false,
+    }));
+  }, []);
+
+  const setPracticeMode = useCallback(() => {
+    setCurrentMode("practice");
+    setGameState((prev) => ({
+      ...prev,
+      gameMode: "practice",
+      dailyMode: false,
+      practiceMode: true,
+    }));
+  }, []);
+
+  const loadDailyColor = useCallback(async () => {
+    try {
+      setIsLoadingDailyColor(true);
+      setError(null);
+      const response = await ColorSDK.fetchDailyColor();
+      setDailyColor(response.color);
+      setGameState((prev) => ({ ...prev, targetColor: response.color }));
+    } catch (error) {
+      console.error("Failed to fetch daily color:", error);
+      setError("Failed to load daily color");
+    } finally {
+      setIsLoadingDailyColor(false);
+    }
+  }, []);
+
+  const generateNewPracticeColor = useCallback(() => {
+    const newColor = ColorSDK.getRandomPracticeColor();
+    setGameState((prev) => ({ ...prev, targetColor: newColor }));
+  }, []);
+
+  // Initialize with daily mode by default
+  useEffect(() => {
+    if (currentMode === "daily" && !dailyColor) {
+      loadDailyColor();
+    }
+  }, [currentMode, dailyColor, loadDailyColor]);
+
   return {
     // Core game state
     gameState,
@@ -332,6 +408,11 @@ export const useColorGame = (): UseColorGameReturn => {
     gameStage,
     cameraError,
 
+    // Game mode management
+    currentMode,
+    isLoadingDailyColor,
+    dailyColor,
+
     // Find Color Game methods
     initializeGame,
     openCamera,
@@ -343,6 +424,12 @@ export const useColorGame = (): UseColorGameReturn => {
     // Webcam handlers
     handleWebcamReady,
     handleWebcamError,
+
+    // Mode management methods
+    setDailyMode,
+    setPracticeMode,
+    loadDailyColor,
+    generateNewPracticeColor,
 
     // Timer management
     startTimer,

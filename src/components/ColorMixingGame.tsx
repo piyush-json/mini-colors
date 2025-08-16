@@ -6,7 +6,7 @@ import { useColorMixingGame } from "@/lib/useColorMixingGame";
 import { useGameContext } from "@/lib/GameContext";
 
 interface ColorMixingGameProps {
-  targetColor?: string;
+  targetColor?: string | null;
   onScoreSubmit?: (score: number, timeTaken: number) => void;
   isMultiplayer?: boolean;
   disabled?: boolean;
@@ -86,7 +86,7 @@ export const ColorMixingGame = ({
     getColorHex,
   } = useColorMixingGame({
     isMultiplayer,
-    targetColor,
+    targetColor: targetColor || "#A6C598",
     onScoreSubmit,
   });
 
@@ -120,14 +120,26 @@ export const ColorMixingGame = ({
       <div className="flex flex-col items-center gap-[17px] w-full">
         {/* Color Display */}
         <div
-          className="relative w-full h-[88px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)]"
+          className="relative w-full h-[88px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
           style={{ backgroundColor: targetColorHex }}
         >
+          {!targetColor && (
+            <div className="absolute inset-0 bg-[#f0f0f0] flex items-center justify-center rounded-[12px]">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+                <span className="font-sintony text-sm text-black">
+                  Loading...
+                </span>
+              </div>
+            </div>
+          )}
           {/* Right half showing mixed color */}
-          <div
-            className="absolute right-0 top-0 w-1/2 h-full border-l border-black"
-            style={{ backgroundColor: mixedColorHex }}
-          />
+          {targetColor && (
+            <div
+              className="absolute right-0 top-0 w-1/2 h-full border-l border-black"
+              style={{ backgroundColor: mixedColorHex }}
+            />
+          )}
         </div>
 
         {/* Labels */}
