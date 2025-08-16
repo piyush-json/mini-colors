@@ -7,6 +7,7 @@ import {
   ReactNode,
   useEffect,
 } from "react";
+import { getDailyColorFromDate } from "./utils";
 
 export interface GameResults {
   targetColor: string;
@@ -83,15 +84,10 @@ export const GameResultsProvider = ({ children }: GameResultsProviderProps) => {
       setIsLoadingDailyColor(true);
       setDailyColorError(null);
 
-      const response = await fetch("/api/daily");
-      if (!response.ok) {
-        throw new Error("Failed to fetch daily color");
-      }
-
-      const data = await response.json();
-      setDailyColor(data.color);
+      const { color } = getDailyColorFromDate();
+      setDailyColor(color);
     } catch (error) {
-      console.error("Failed to fetch daily color:", error);
+      console.error("Failed to get daily color:", error);
       setDailyColorError("Failed to load daily color");
     } finally {
       setIsLoadingDailyColor(false);

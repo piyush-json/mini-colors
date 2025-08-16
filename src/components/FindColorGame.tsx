@@ -88,7 +88,7 @@ export const FindColorGame = ({
             </p>
           </div>
 
-          <div
+          <button
             className={cn(
               "w-full h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
               "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed",
@@ -99,7 +99,7 @@ export const FindColorGame = ({
             }}
           >
             FOUND IT
-          </div>
+          </button>
         </div>
       )}
 

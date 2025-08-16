@@ -1,4 +1,5 @@
 import { differenceCiede2000, converter, formatHex, formatRgb } from "culori";
+import { getDailyColorFromDate } from "./utils";
 
 const lab = converter("lab");
 
@@ -240,14 +241,15 @@ export class ColorSDK {
   }
 
   /**
-   * Fetch daily color from API
+   * Fetch daily color from utils
    */
   static async fetchDailyColor(): Promise<DailyColorResponse> {
-    const response = await fetch("/api/daily");
-    if (!response.ok) {
-      throw new Error("Failed to fetch daily color");
-    }
-    return response.json();
+    const dailyColorData = getDailyColorFromDate();
+    return {
+      color: dailyColorData.color,
+      date: dailyColorData.date,
+      message: "Daily color retrieved successfully",
+    };
   }
 
   /**
