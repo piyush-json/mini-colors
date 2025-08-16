@@ -1,13 +1,12 @@
-// Hook for Color Mixing Game functionality
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ColorMixingSDK, ColorMixingState } from "./mix-sdk";
 
 interface UseColorMixingGameOptions {
   isMultiplayer?: boolean;
-  targetColor?: string; // Hex color for multiplayer mode
+  targetColor?: string;
   onScoreSubmit?: (score: number, timeTaken: number) => void;
-  autoSubmit?: boolean; // Auto submit when mixed for multiplayer
+  autoSubmit?: boolean;
+  mode?: "daily" | "practice";
 }
 
 export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
@@ -16,31 +15,27 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     targetColor,
     onScoreSubmit,
     autoSubmit = false,
+    mode = "practice",
   } = options;
 
-  // Create SDK instance
   const sdkRef = useRef<ColorMixingSDK | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const initializedRef = useRef(false);
 
-  // Initialize SDK
   if (!sdkRef.current) {
     sdkRef.current = new ColorMixingSDK();
   }
 
   const sdk = sdkRef.current;
 
-  // State from SDK
   const [state, setState] = useState<ColorMixingState>(sdk.getState());
   const [showHelp, setShowHelp] = useState(false);
 
-  // Subscribe to SDK state changes
   useEffect(() => {
     const unsubscribe = sdk.subscribe(setState);
     return unsubscribe;
   }, [sdk]);
 
-  // Setup timer
   useEffect(() => {
     if (state.isPlaying && !timerRef.current) {
       timerRef.current = setInterval(() => {
@@ -59,12 +54,11 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     };
   }, [state.isPlaying, sdk]);
 
-  // Initialize challenge only when explicitly called
   const initializeGame = useCallback(
     (targetColor?: string, isMultiplayer?: boolean) => {
-      initializedRef.current = false; // Reset initialization flag
+      initializedRef.current = false;
 
-      if (isMultiplayer && targetColor) {
+      if (targetColor) {
         sdk.loadChallenge(targetColor);
         initializedRef.current = true;
       } else if (!isMultiplayer) {
@@ -74,21 +68,6 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     },
     [sdk],
   );
-
-  // Remove auto-initialization - only initialize when explicitly called
-  // useEffect(() => {
-  //   if (initializedRef.current) return;
-
-  //   if (isMultiplayer && targetColor) {
-  //     sdk.loadChallenge(targetColor);
-  //     initializedRef.current = true;
-  //   } else if (!isMultiplayer) {
-  //     sdk.startChallenge();
-  //     initializedRef.current = true;
-  //   }
-  // }, [isMultiplayer, targetColor, sdk]);
-
-  // Auto-submit in multiplayer mode when results are shown
   useEffect(() => {
     if (
       isMultiplayer &&
@@ -111,7 +90,6 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     onScoreSubmit,
   ]);
 
-  // Action handlers
   const handleSliderChange = useCallback(
     (colorType: "color1" | "color2" | "distractor", value: number) => {
       sdk.updateColorPercentage(colorType, value);
@@ -130,15 +108,12 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     console.log("Handling mix...");
     const attempt = sdk.submitMix();
 
-    // In multiplayer mode, submit score to server
     if (isMultiplayer && onScoreSubmit && attempt) {
       onScoreSubmit(attempt.matchPercentage, attempt.timeTaken);
     }
 
-    // In single-player mode, save attempt to database
     if (!isMultiplayer && attempt) {
       try {
-        // Convert ColorRGB objects to hex strings
         const targetColorHex = `#${attempt.targetColor.r.toString(16).padStart(2, "0")}${attempt.targetColor.g.toString(16).padStart(2, "0")}${attempt.targetColor.b.toString(16).padStart(2, "0")}`;
         const mixedColorHex = `#${attempt.mixedColor.r.toString(16).padStart(2, "0")}${attempt.mixedColor.g.toString(16).padStart(2, "0")}${attempt.mixedColor.b.toString(16).padStart(2, "0")}`;
 
@@ -153,7 +128,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
             capturedColor: mixedColorHex,
             similarity: attempt.matchPercentage,
             timeTaken: attempt.timeTaken,
-            timeScore: 0, // Mixing game doesn't have time scoring
+            timeScore: 0,
             finalScore: attempt.matchPercentage,
             date: new Date().toISOString().split("T")[0],
           }),
@@ -179,7 +154,6 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     setShowHelp((prev) => !prev);
   }, []);
 
-  // Computed values
   const targetColorHex = sdk.getTargetColorHex();
   const mixedColorHex = sdk.getMixedColorHex();
   const recentAttempts = sdk.getRecentAttempts(3);
@@ -188,24 +162,20 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     ? sdk.getScoreCategory(state.lastScore)
     : null;
 
-  // Helper functions
   const getColorHex = useCallback((r: number, g: number, b: number) => {
     return `rgb(${r}, ${g}, ${b})`;
   }, []);
 
   return {
-    // State
     state,
     showHelp,
 
-    // Computed values
     targetColorHex,
     mixedColorHex,
     recentAttempts,
     stats,
     scoreCategory,
 
-    // Actions
     handleSliderChange,
     handleShadingChange,
     handleMix,
@@ -214,10 +184,8 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     toggleHelp,
     initializeGame,
 
-    // Utilities
     getColorHex,
 
-    // SDK reference for advanced usage
     sdk,
   };
 };

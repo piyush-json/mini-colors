@@ -15,6 +15,7 @@ interface ColorMixingGameProps {
   ) => void;
   isMultiplayer?: boolean;
   disabled?: boolean;
+  mode?: "daily" | "practice";
 }
 
 interface ColorSliderProps {
@@ -75,12 +76,12 @@ const ColorSlider = ({
 };
 
 export const ColorMixingGame = ({
-  targetColor = "#A6C598",
+  targetColor,
   onScoreSubmit,
   isMultiplayer = false,
   disabled = false,
+  mode = "practice",
 }: ColorMixingGameProps = {}) => {
-  // Use the color mixing game hook
   const {
     state,
     targetColorHex,
@@ -92,29 +93,26 @@ export const ColorMixingGame = ({
     initializeGame,
   } = useColorMixingGame({
     isMultiplayer,
+    targetColor: targetColor || undefined,
     onScoreSubmit,
+    mode,
   });
 
-  // Get game context to sync timer
   const gameContext = useGameContext();
 
-  // Initialize game when targetColor changes (similar to FindColorGame)
   useEffect(() => {
     if (targetColor) {
       initializeGame(targetColor, isMultiplayer);
     }
   }, [targetColor, isMultiplayer, initializeGame]);
 
-  // Sync the timer with the game context so header can display it
   useEffect(() => {
     if (gameContext && state.timer !== undefined && gameContext.updateTimer) {
-      // Update the game context timer with the mixing game timer
       gameContext.updateTimer(state.timer);
     }
   }, [state.timer, gameContext]);
 
-  // Don't render if no target color (loading state)
-  if (!targetColor) {
+  if (mode === "daily" && !targetColor) {
     return (
       <div className="flex flex-col items-center gap-[55px] w-full  mx-auto">
         {/* Target Color Display with Loading */}

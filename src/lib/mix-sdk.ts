@@ -1,5 +1,3 @@
-// Color Mixing SDK - Core functionality for color mixing challenges
-
 import {
   mixColors,
   generateRandomColor,
@@ -84,26 +82,21 @@ export class ColorMixingSDK {
     this.listeners = new Set();
   }
 
-  // Subscribe to state changes
   subscribe(listener: (state: ColorMixingState) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  // Notify all listeners of state changes
   private notify(): void {
-    // Use setTimeout to avoid infinite loops during render
     setTimeout(() => {
       this.listeners.forEach((listener) => listener({ ...this.state }));
     }, 0);
   }
 
-  // Get current state
   getState(): ColorMixingState {
     return { ...this.state };
   }
 
-  // Generate a new color mixing challenge
   generateChallenge(targetColor?: ColorRGB): ColorMixingChallenge {
     const target = targetColor || generateRandomColor();
     const palette = generateColorPalette(target);
@@ -135,7 +128,6 @@ export class ColorMixingSDK {
     return challenge;
   }
 
-  // Start a new challenge
   startChallenge(targetColor?: ColorRGB): void {
     this.generateChallenge(targetColor);
     this.state.isPlaying = true;
@@ -144,7 +136,6 @@ export class ColorMixingSDK {
     this.notify();
   }
 
-  // Update color percentages
   updateColorPercentage(
     colorType: keyof Pick<ColorPercentages, "color1" | "color2" | "distractor">,
     percentage: number,
@@ -155,7 +146,6 @@ export class ColorMixingSDK {
     }
   }
 
-  // Update shading percentages
   updateShadingPercentage(
     shadingType: "white" | "black",
     percentage: number,
@@ -166,11 +156,9 @@ export class ColorMixingSDK {
     }
   }
 
-  // Update the mixed color based on current percentages
   private updateMixedColor(): void {
     const newMixedColor = mixColors(this.state.colorPercentages);
 
-    // Only update if the color actually changed
     if (
       newMixedColor.r !== this.state.mixedColor.r ||
       newMixedColor.g !== this.state.mixedColor.g ||
@@ -181,7 +169,6 @@ export class ColorMixingSDK {
     }
   }
 
-  // Submit the current mix
   submitMix(): ColorMixingAttempt | null {
     console.log("Submitting mix...");
     if (!this.state.currentChallenge || !this.state.startTime) return null;
@@ -226,7 +213,6 @@ export class ColorMixingSDK {
     return attempt;
   }
 
-  // Reset the current challenge
   resetChallenge(): void {
     if (!this.state.currentChallenge) return;
 
@@ -249,7 +235,6 @@ export class ColorMixingSDK {
     this.notify();
   }
 
-  // Update timer
   updateTimer(): void {
     if (this.state.startTime && this.state.isPlaying) {
       this.state.timer = Math.floor((Date.now() - this.state.startTime) / 1000);
@@ -257,12 +242,10 @@ export class ColorMixingSDK {
     }
   }
 
-  // Get recent attempts
   getRecentAttempts(count: number = 3): ColorMixingAttempt[] {
     return this.state.attempts.slice(-count).reverse();
   }
 
-  // Get challenge statistics
   getStats() {
     const attempts = this.state.attempts;
     if (attempts.length === 0) {
@@ -289,7 +272,6 @@ export class ColorMixingSDK {
     };
   }
 
-  // Get score category
   getScoreCategory(score: number): {
     text: string;
     variant: "success" | "accent" | "secondary" | "warning" | "destructive";
@@ -302,37 +284,89 @@ export class ColorMixingSDK {
     return { text: "KEEP TRYING", variant: "destructive" };
   }
 
-  // Convert target color to hex
   getTargetColorHex(): string {
     if (!this.state.currentChallenge) return "#000000";
     const { r, g, b } = this.state.currentChallenge.targetColor;
     return rgbToHex(r, g, b);
   }
 
-  // Convert mixed color to hex
   getMixedColorHex(): string {
     const { r, g, b } = this.state.mixedColor;
     return rgbToHex(r, g, b);
   }
 
-  // Load challenge from external source (for multiplayer)
   loadChallenge(targetColorHex: string): void {
-    const hexToRgb = (hex: string): ColorRGB => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result
-        ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16),
-          }
-        : { r: 255, g: 0, b: 0 };
+    const hslToRgb = (hsl: string): ColorRGB => {
+      const match = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+      if (match) {
+        const h = parseInt(match[1]) / 360;
+        const s = parseInt(match[2]) / 100;
+        const l = parseInt(match[3]) / 100;
+
+        const hue2rgb = (p: number, q: number, t: number) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+
+        const r = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+        const g = Math.round(hue2rgb(p, q, h) * 255);
+        const b = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+
+        return { r, g, b };
+      }
+
+      return hexToRgb(hsl);
     };
 
-    const targetColor = hexToRgb(targetColorHex);
+    const rgbStringToRgb = (rgb: string): ColorRGB => {
+      // Parse RGB string like "rgb(211, 227, 76)"
+      const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      if (match) {
+        return {
+          r: parseInt(match[1]),
+          g: parseInt(match[2]),
+          b: parseInt(match[3]),
+        };
+      }
+
+      return hexToRgb(rgb);
+    };
+
+    const hexToRgb = (hex: string): ColorRGB => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (result) {
+        const rgb = {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        };
+        return rgb;
+      } else {
+        console.error(
+          "Failed to parse hex color:",
+          hex,
+          "falling back to default",
+        );
+
+        return { r: 166, g: 197, b: 152 };
+      }
+    };
+
+    const targetColor = targetColorHex.startsWith("hsl(")
+      ? hslToRgb(targetColorHex)
+      : targetColorHex.startsWith("rgb(")
+        ? rgbStringToRgb(targetColorHex)
+        : hexToRgb(targetColorHex);
     this.startChallenge(targetColor);
   }
 }
 
-// Export utilities
 export { rgbToHex };
 export type { ColorPercentages, ColorRGB };

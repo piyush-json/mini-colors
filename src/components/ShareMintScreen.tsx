@@ -49,11 +49,11 @@ export const ShareMintScreen = ({
       </div>
 
       <div
-        className="w-[373px] h-[443px] bg-white border-2 border-black rounded-[12px] mx-auto relative"
+        className="w-fulll h-[443px] bg-white border-2 border-black rounded-[12px] mx-auto relative"
         style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
       >
         <div
-          className="absolute w-[144px] h-[158px] border border-black rounded-[19px] rotate-6"
+          className="absolute w-full h-[158px] border border-black rounded-[19px] rotate-6"
           style={{
             backgroundColor: targetColor,
             left: "167px",
@@ -63,7 +63,7 @@ export const ShareMintScreen = ({
 
         {/* Captured Color Circle */}
         <div
-          className="absolute w-[162px] h-[166px] border border-black rounded-[19px] -rotate-6"
+          className="absolute w-full h-[166px] border border-black rounded-[19px] -rotate-6"
           style={{
             backgroundColor: capturedColor,
             left: "49px",
@@ -72,7 +72,7 @@ export const ShareMintScreen = ({
         />
 
         <div
-          className="absolute flex flex-col items-center gap-4 w-[165px]"
+          className="absolute flex flex-col items-center gap-4"
           style={{ left: "104px", top: "64px" }}
         >
           <span className="font-hartone text-[54px] font-normal text-black leading-[42px]">
@@ -101,7 +101,7 @@ export const ShareMintScreen = ({
         </div>
 
         {/* Color Palette Strips */}
-        <div className="absolute w-[373px] h-4 flex" style={{ top: "253px" }}>
+        <div className="absolute w-full h-4 flex" style={{ top: "253px" }}>
           {/* Top color strip */}
           {[
             "#FF9D9D",

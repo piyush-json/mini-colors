@@ -184,7 +184,7 @@ export const FindColorGame = ({
             </div>
           </div>
 
-          <div
+          <button
             className="w-full h-[51px] bg-[#FFE254] border border-black rounded-[39px] flex items-center justify-center cursor-pointer font-hartone text-[30px] font-normal text-black"
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
@@ -198,7 +198,7 @@ export const FindColorGame = ({
             }}
           >
             SUBMIT
-          </div>
+          </button>
         </div>
       )}
     </div>

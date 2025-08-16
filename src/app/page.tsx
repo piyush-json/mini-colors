@@ -3,6 +3,7 @@
 import { Brush, Fire } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
+import { useDailyColor } from "@/lib/GameResultsContext";
 import Link from "next/link";
 
 const Title = () => {
@@ -19,6 +20,8 @@ const Title = () => {
 };
 
 export default function HomePage() {
+  const { dailyColor, isLoadingDailyColor } = useDailyColor();
+
   // Calculate next GMT midnight
   const now = new Date();
   const nextRefresh = new Date();
@@ -29,6 +32,7 @@ export default function HomePage() {
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const refreshTime = `${hours.toString().padStart(2, "0")}h:${minutes.toString().padStart(2, "0")}m`;
+
   return (
     <>
       <Title />
@@ -44,10 +48,17 @@ export default function HomePage() {
         <div
           className="w-[220px] h-[220px] border border-black rounded-[30px]  relative"
           style={{
-            backgroundColor: "#A6C598",
+            backgroundColor: isLoadingDailyColor
+              ? "#f0f0f0"
+              : dailyColor || "#A6C598",
             boxShadow: "0px 1.5px 0px 0px rgba(0, 0, 0, 1)",
           }}
         >
+          {isLoadingDailyColor && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+            </div>
+          )}
           <div className="absolute right-0 translate-x-[5%] top-2">
             <Brush />
           </div>

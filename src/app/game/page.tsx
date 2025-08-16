@@ -1,49 +1,57 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FindColorGame } from "@/components/FindColorGame";
 import { ColorMixingGame } from "@/components/ColorMixingGame";
-import { ShareMintScreen } from "@/components/ShareMintScreen";
 import { GameProvider, useGameContext } from "@/lib/GameContext";
 import { useColorGame } from "@/lib/useColorGame";
 import { useGameResults } from "@/lib/GameResultsContext";
 import { cn } from "@/lib/utils";
 
 function GamePageContent() {
+  const router = useRouter();
   const gameContext = useGameContext();
   const {
     currentMode,
     gameType,
     results,
+    dailyColor,
+    isLoadingDailyColor,
     setGameMode,
     setGameType,
     setResults,
     clearResults,
+    loadDailyColor,
   } = useGameResults();
 
-  const {
-    gameState,
-    isLoadingDailyColor,
-    setDailyMode,
-    setPracticeMode,
-    loadDailyColor,
-    generateNewPracticeColor,
-  } = useColorGame({ initialMode: currentMode });
+  const { gameState, setDailyMode, setPracticeMode, generateNewPracticeColor } =
+    useColorGame({ initialMode: currentMode });
 
   useEffect(() => {
-    if (currentMode === "daily") {
+    if (currentMode === "daily" && !dailyColor && !isLoadingDailyColor) {
       loadDailyColor();
     }
-  }, [currentMode, loadDailyColor]);
+  }, [currentMode, dailyColor, isLoadingDailyColor, loadDailyColor]);
 
   const handleModeChange = (mode: "daily" | "practice") => {
-    setGameMode(mode);
-    if (mode === "daily") {
-      setDailyMode();
-    } else {
+    if (mode === "practice") {
       setPracticeMode();
       generateNewPracticeColor();
+    } else {
+      setDailyMode();
+      if (!dailyColor && !isLoadingDailyColor) {
+        loadDailyColor();
+      }
     }
+    setGameMode(mode);
+  };
+
+  const getTargetColor = () => {
+    if (currentMode === "daily") {
+      return isLoadingDailyColor ? undefined : dailyColor;
+    }
+    return gameState.targetColor;
   };
 
   const handleScoreSubmit = (
@@ -59,10 +67,8 @@ function GamePageContent() {
       actualCapturedColor,
     });
 
-    // Get captured color based on game type
     let capturedColor: string;
     if (gameType === "upload") {
-      // For upload game, get from camera context
       const contextCapturedColor = gameContext?.capturedColor;
       if (!contextCapturedColor) {
         console.error("No captured color available for upload game");
@@ -70,7 +76,6 @@ function GamePageContent() {
       }
       capturedColor = contextCapturedColor;
     } else {
-      // For mixing game, use the mixed color passed from component
       if (!actualCapturedColor) {
         console.error("No mixed color provided for mixing game");
         return;
@@ -80,11 +85,14 @@ function GamePageContent() {
 
     console.log("Captured color:", capturedColor);
 
-    // Use the actual target color passed from the game component, or fall back to gameState
-    const targetColorForResults = actualTargetColor || gameState.targetColor;
+    const targetColorForResults = actualTargetColor || getTargetColor();
     console.log("Target color for results:", targetColorForResults);
 
-    // Set results in context instead of navigating with URL params
+    if (!targetColorForResults) {
+      console.error("No target color available for results");
+      return;
+    }
+
     setResults({
       targetColor: targetColorForResults,
       capturedColor,
@@ -93,57 +101,10 @@ function GamePageContent() {
       mode: currentMode,
       gameType,
     });
+
+    router.push("/results");
   };
 
-  // If there are results, show the results screen
-  if (results) {
-    const handleShare = () => {
-      console.log("Share button clicked");
-      const shareText = `I just scored ${results.similarity}% in the Color Finding Game! 🎯`;
-      if (navigator.share) {
-        navigator.share({
-          title: "Color Game Results",
-          text: shareText,
-          url: window.location.href,
-        });
-      } else {
-        // Fallback to copying to clipboard
-        navigator.clipboard.writeText(shareText);
-        alert("Results copied to clipboard!");
-      }
-    };
-
-    const handleMint = () => {
-      console.log("Mint button clicked");
-      alert("Mint functionality coming soon!");
-    };
-
-    const handleContinue = () => {
-      clearResults();
-    };
-
-    const handleAttemptAgain = () => {
-      clearResults();
-      setGameMode("practice");
-    };
-
-    return (
-      <ShareMintScreen
-        targetColor={results.targetColor}
-        capturedColor={results.capturedColor}
-        similarity={results.similarity}
-        timeTaken={results.timeTaken}
-        mode={results.mode}
-        gameType={results.gameType}
-        onShare={handleShare}
-        onMint={handleMint}
-        onContinue={handleContinue}
-        onAttemptAgain={handleAttemptAgain}
-      />
-    );
-  }
-
-  // Render game interface
   return (
     <div className="flex flex-col items-center gap-4 w-full justify-between grow pb-8">
       <div className="flex flex-col items-center gap-1 w-full">
@@ -229,21 +190,16 @@ function GamePageContent() {
 
       {gameType === "upload" ? (
         <FindColorGame
-          targetColor={
-            isLoadingDailyColor && currentMode === "daily"
-              ? undefined
-              : gameState.targetColor
-          }
+          key={`find-${currentMode}-${getTargetColor()}`}
+          targetColor={getTargetColor()}
           onScoreSubmit={handleScoreSubmit}
         />
       ) : (
         <ColorMixingGame
-          targetColor={
-            isLoadingDailyColor && currentMode === "daily"
-              ? undefined
-              : gameState.targetColor
-          }
+          key={`mix-${currentMode}-${getTargetColor()}`}
+          targetColor={getTargetColor()}
           onScoreSubmit={handleScoreSubmit}
+          mode={currentMode}
         />
       )}
     </div>

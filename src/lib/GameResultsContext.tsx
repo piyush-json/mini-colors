@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 
 export interface GameResults {
   targetColor: string;
@@ -16,6 +22,11 @@ interface GameResultsContextType {
   currentMode: "daily" | "practice";
   gameType: "upload" | "mixing";
 
+  // Daily color state
+  dailyColor: string | null;
+  isLoadingDailyColor: boolean;
+  dailyColorError: string | null;
+
   // Results state
   results: GameResults | null;
 
@@ -24,6 +35,8 @@ interface GameResultsContextType {
   setGameType: (type: "upload" | "mixing") => void;
   setResults: (results: GameResults) => void;
   clearResults: () => void;
+  loadDailyColor: () => Promise<void>;
+  refreshDailyColor: () => Promise<void>;
 
   // Navigation
   navigateToResults: () => void;
@@ -44,6 +57,11 @@ export const GameResultsProvider = ({ children }: GameResultsProviderProps) => {
   const [gameType, setGameType] = useState<"upload" | "mixing">("upload");
   const [results, setResults] = useState<GameResults | null>(null);
 
+  // Daily color state
+  const [dailyColor, setDailyColor] = useState<string | null>(null);
+  const [isLoadingDailyColor, setIsLoadingDailyColor] = useState(false);
+  const [dailyColorError, setDailyColorError] = useState<string | null>(null);
+
   const setGameMode = (mode: "daily" | "practice") => {
     setCurrentMode(mode);
   };
@@ -59,6 +77,38 @@ export const GameResultsProvider = ({ children }: GameResultsProviderProps) => {
   const clearResults = () => {
     setResults(null);
   };
+
+  const loadDailyColor = async () => {
+    try {
+      setIsLoadingDailyColor(true);
+      setDailyColorError(null);
+
+      const response = await fetch("/api/daily");
+      if (!response.ok) {
+        throw new Error("Failed to fetch daily color");
+      }
+
+      const data = await response.json();
+      setDailyColor(data.color);
+    } catch (error) {
+      console.error("Failed to fetch daily color:", error);
+      setDailyColorError("Failed to load daily color");
+    } finally {
+      setIsLoadingDailyColor(false);
+    }
+  };
+
+  const refreshDailyColor = async () => {
+    // Force refresh daily color
+    await loadDailyColor();
+  };
+
+  // Load daily color on mount if not already loaded
+  useEffect(() => {
+    if (!dailyColor && !isLoadingDailyColor) {
+      loadDailyColor();
+    }
+  }, [dailyColor, isLoadingDailyColor]);
 
   const navigateToResults = () => {
     // This will be handled by the components checking if results exist
@@ -78,11 +128,16 @@ export const GameResultsProvider = ({ children }: GameResultsProviderProps) => {
   const value: GameResultsContextType = {
     currentMode,
     gameType,
+    dailyColor,
+    isLoadingDailyColor,
+    dailyColorError,
     results,
     setGameMode,
     setGameType: setGameTypeValue,
     setResults: setResultsValue,
     clearResults,
+    loadDailyColor,
+    refreshDailyColor,
     navigateToResults,
     navigateToGame,
     navigateToPractice,
@@ -105,4 +160,16 @@ export const useGameResults = (): GameResultsContextType => {
 
 export const useGameResultsOptional = (): GameResultsContextType | null => {
   return useContext(GameResultsContext);
+};
+
+// Hook specifically for daily color functionality
+export const useDailyColor = () => {
+  const context = useGameResults();
+  return {
+    dailyColor: context.dailyColor,
+    isLoadingDailyColor: context.isLoadingDailyColor,
+    dailyColorError: context.dailyColorError,
+    loadDailyColor: context.loadDailyColor,
+    refreshDailyColor: context.refreshDailyColor,
+  };
 };
