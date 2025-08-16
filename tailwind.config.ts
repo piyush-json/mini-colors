@@ -80,6 +80,7 @@ const config: Config = {
       },
       fontFamily: {
         "geist-sans": ["var(--font-geist-sans)", "sans-serif"],
+        sintony: ["Sintony", "sans-serif"],
         mono: [
           "JetBrains Mono",
           "ui-monospace",
@@ -91,11 +92,12 @@ const config: Config = {
           "Courier New",
           "monospace",
         ],
+        hartone: ["Hartone Softed", "sans-serif"],
       },
       boxShadow: {
-        brutal: "8px 8px 0px hsl(var(--foreground))",
-        "brutal-sm": "4px 4px 0px hsl(var(--foreground))",
-        "brutal-lg": "12px 12px 0px hsl(var(--foreground))",
+        soft: "0px 4px 0px hsl(var(--foreground))",
+        "soft-sm": "0px 2px 0px hsl(var(--foreground))",
+        "soft-lg": "0px 6px 0px hsl(var(--foreground))",
       },
       animation: {
         "fade-out": "1s fadeOut 3s ease-out forwards",

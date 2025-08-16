@@ -183,6 +183,7 @@ export class ColorMixingSDK {
 
   // Submit the current mix
   submitMix(): ColorMixingAttempt | null {
+    console.log("Submitting mix...");
     if (!this.state.currentChallenge || !this.state.startTime) return null;
 
     const timeTaken = Math.floor((Date.now() - this.state.startTime) / 1000);
@@ -208,6 +209,20 @@ export class ColorMixingSDK {
     this.state.isPlaying = false;
 
     this.notify();
+    console.log("Mix submitted:", {
+      targetColor: rgbToHex(
+        this.state.currentChallenge.targetColor.r,
+        this.state.currentChallenge.targetColor.g,
+        this.state.currentChallenge.targetColor.b,
+      ),
+      mixedColor: rgbToHex(
+        this.state.mixedColor.r,
+        this.state.mixedColor.g,
+        this.state.mixedColor.b,
+      ),
+      matchPercentage,
+      timeTaken,
+    });
     return attempt;
   }
 

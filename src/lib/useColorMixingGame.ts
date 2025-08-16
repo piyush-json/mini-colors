@@ -111,6 +111,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
   );
 
   const handleMix = useCallback(async () => {
+    console.log("Handling mix...");
     const attempt = sdk.submitMix();
 
     // In multiplayer mode, submit score to server
@@ -148,7 +149,6 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
 
     return attempt;
   }, [sdk, isMultiplayer, onScoreSubmit]);
-
   const handleReset = useCallback(() => {
     sdk.resetChallenge();
   }, [sdk]);

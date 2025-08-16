@@ -1,8 +1,43 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { ColorSDK, ColorMatch, GameState } from "./color-sdk";
 import Webcam from "react-webcam";
 
-export const useColorGame = () => {
+export interface UseColorGameReturn {
+  // Core game state
+  gameState: GameState;
+  timer: number;
+  isLoading: boolean;
+  error: string | null;
+  webcamReady: boolean;
+  webcamRef: React.RefObject<Webcam>;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+
+  // Find Color Game specific state
+  gameFinished: boolean;
+  capturedImage: string | null;
+  capturedColor: string | null;
+  gameStage: "initial" | "camera" | "captured";
+  cameraError: string | null;
+
+  // Find Color Game methods
+  initializeGame: (targetColor: string, isMultiplayer?: boolean) => void;
+  openCamera: () => void;
+  captureColorPhoto: () => void;
+  retakePhoto: () => void;
+  submitResult: (
+    onScoreSubmit: (score: number, timeTaken: number) => void,
+  ) => void;
+  resetFindColorGame: () => void;
+  handleWebcamReady: () => void;
+  handleWebcamError: (error: string | DOMException) => void;
+
+  // Timer management
+  startTimer: () => void;
+  stopTimer: () => void;
+  updateTimer: (newTime: number) => void;
+}
+
+export const useColorGame = (): UseColorGameReturn => {
   const [gameState, setGameState] = useState<GameState>({
     isPlaying: false,
     targetColor: "",
@@ -15,26 +50,47 @@ export const useColorGame = () => {
     bestScore: 0,
   });
 
-  const [currentColor, setCurrentColor] = useState("");
-  const [lastResult, setLastResult] = useState<ColorMatch | null>(null);
   const [timer, setTimer] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webcamReady, setWebcamReady] = useState(false);
-  const [dailyColor, setDailyColor] = useState<string>("");
-  const [showResult, setShowResult] = useState(false);
 
-  const webcamRef = useRef<Webcam | null>(null);
+  // Find Color Game specific state
+  const [gameFinished, setGameFinished] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedColor, setCapturedColor] = useState<string | null>(null);
+  const [gameStage, setGameStage] = useState<"initial" | "camera" | "captured">(
+    "initial",
+  );
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Timer management
+  // Timer management - Updated to actually work
+  useEffect(() => {
+    if (gameState.isPlaying && !gameFinished) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimer((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [gameState.isPlaying, gameFinished]);
+
   const startTimer = useCallback(() => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    // timerIntervalRef.current = setInterval(
-    //   () => setTimer((prev) => prev + 1),
-    //   1000,
-    // );
+    setTimer(0);
   }, []);
 
   const stopTimer = useCallback(() => {
@@ -48,378 +104,249 @@ export const useColorGame = () => {
   const handleWebcamReady = useCallback(() => {
     setWebcamReady(true);
     setError(null);
+    setCameraError(null);
   }, []);
 
-  const handleWebcamError = useCallback(
-    (error: { name: string; message: string }) => {
-      setWebcamReady(false);
-      let message = "Camera initialization failed.";
+  const handleWebcamError = useCallback((error: string | DOMException) => {
+    let message = "Camera initialization failed.";
 
-      if (error.name === "NotAllowedError") {
-        message =
-          "Camera access denied. Please allow camera permissions and refresh the page.";
-      } else if (error.name === "NotFoundError") {
-        message = "No camera found on this device.";
-      } else if (error.name === "NotReadableError") {
-        message =
-          "Camera is in use by another application. Please close other apps using the camera.";
-      } else if (error.name === "OverconstrainedError") {
-        message =
-          "Camera doesn't support the required resolution. Please try a different camera.";
-      } else if (error.name === "SecurityError") {
-        message =
-          "Camera access blocked for security reasons. Please check your browser settings.";
+    if (typeof error === "object" && error.name === "NotAllowedError") {
+      message =
+        "Camera access denied. Please allow camera permissions and refresh the page.";
+    } else if (typeof error === "object" && error.name === "NotFoundError") {
+      message = "No camera found on this device.";
+    } else if (typeof error === "object" && error.name === "NotReadableError") {
+      message =
+        "Camera is in use by another application. Please close other apps using the camera.";
+    } else if (
+      typeof error === "object" &&
+      error.name === "OverconstrainedError"
+    ) {
+      message =
+        "Camera doesn't support the required resolution. Please try a different camera.";
+    } else if (typeof error === "object" && error.name === "SecurityError") {
+      message =
+        "Camera access blocked for security reasons. Please check your browser settings.";
+    }
+
+    setCameraError(message);
+    setWebcamReady(false);
+  }, []);
+
+  // Find Color Game specific methods
+  const initializeGame = useCallback(
+    (targetColor: string, isMultiplayer = false) => {
+      setGameState((prev) => ({
+        ...prev,
+        targetColor,
+        isPlaying: false,
+        startTime: 0,
+        score: 0,
+      }));
+
+      if (isMultiplayer) {
+        setGameStage("camera");
+        setGameState((prev) => ({
+          ...prev,
+          isPlaying: true,
+          startTime: Date.now(),
+        }));
+        setTimer(0);
+        setGameFinished(false);
+        startTimer();
+      } else {
+        setGameStage("initial");
       }
-
-      setError(message);
     },
-    [],
+    [startTimer],
   );
 
-  const startGame = useCallback(() => {
-    if (gameState.practiceMode) {
-      const newColor = ColorSDK.generateRandomColor();
-      setGameState((prev) => ({
-        ...prev,
-        isPlaying: true,
-        targetColor: newColor,
-        startTime: Date.now(),
-        score: 0,
-        attempts: 0,
-        bestScore: 0,
-      }));
-      setCurrentColor("");
-      setLastResult(null);
-      setTimer(0);
-      setError(null);
-      setShowResult(false);
-      startTimer();
-      return;
-    }
-
-    if (gameState.dailyMode) {
-      if (!dailyColor) {
-        setError("Daily color not loaded. Please try again.");
-        return;
-      }
-      setGameState((prev) => ({
-        ...prev,
-        isPlaying: true,
-        targetColor: dailyColor,
-        startTime: Date.now(),
-        score: 0,
-        attempts: prev.attempts + 1,
-      }));
-      setCurrentColor("");
-      setLastResult(null);
-      setTimer(0);
-      setError(null);
-      setShowResult(false);
-      startTimer();
-      return;
-    }
-
-    if (!webcamReady || !webcamRef.current) {
-      setError("Camera not ready. Please wait for camera to initialize.");
-      return;
-    }
-
-    const newColor = ColorSDK.generateRandomColor();
+  const openCamera = useCallback(() => {
+    setGameStage("camera");
     setGameState((prev) => ({
       ...prev,
       isPlaying: true,
-      targetColor: newColor,
       startTime: Date.now(),
-      score: 0,
-      attempts: 0,
-      bestScore: 0,
     }));
-    setCurrentColor("");
-    setLastResult(null);
     setTimer(0);
-    setError(null);
-    setShowResult(false);
+    setGameFinished(false);
     startTimer();
-  }, [
-    webcamReady,
-    gameState.practiceMode,
-    gameState.dailyMode,
-    dailyColor,
-    startTimer,
-  ]);
+  }, [startTimer]);
 
-  const endGame = useCallback(() => {
-    setGameState((prev) => ({ ...prev, isPlaying: false }));
-    stopTimer();
-  }, [stopTimer]);
-
-  const captureColor = useCallback(async () => {
-    if (!gameState.isPlaying) return;
+  const captureColorPhoto = useCallback(async () => {
+    if (!gameState.isPlaying || gameFinished || isLoading) return;
 
     setIsLoading(true);
-    setError(null);
 
     try {
-      let capturedColor: string;
-
-      if (gameState.practiceMode) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const targetRgb = ColorSDK.hexToRgb(gameState.targetColor);
-        const match = targetRgb.match(/\d+/g);
-        if (!match) throw new Error("Invalid target color");
-
-        const [r, g, b] = match.map(Number);
-        const variation = 30;
-        const capturedR = Math.max(
-          0,
-          Math.min(255, r + (Math.random() - 0.5) * variation),
-        );
-        const capturedG = Math.max(
-          0,
-          Math.min(255, g + (Math.random() - 0.5) * variation),
-        );
-        const capturedB = Math.max(
-          0,
-          Math.min(255, b + (Math.random() - 0.5) * variation),
-        );
-        capturedColor = `rgb(${capturedR}, ${capturedG}, ${capturedB})`;
-      } else {
-        if (!webcamRef.current || !canvasRef.current) {
-          throw new Error("Camera not available");
-        }
-
-        const video = webcamRef.current.video as HTMLVideoElement;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-
-        if (!ctx || !video.videoWidth || !video.videoHeight) {
-          throw new Error("Video not ready");
-        }
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-        const pixels = [];
-        const centerX = Math.floor(video.videoWidth / 2);
-        const centerY = Math.floor(video.videoHeight / 2);
-        for (let x = centerX - 5; x < centerX + 5; x += 1) {
-          for (let y = centerY - 5; y < centerY + 5; y += 1) {
-            const pixel = ctx.getImageData(x, y, 1, 1).data;
-            pixels.push(pixel);
-          }
-        }
-
-        const pixel = pixels.reduce(
-          (acc, pixel) => ({
-            r: acc.r + pixel[0],
-            g: acc.g + pixel[1],
-            b: acc.b + pixel[2],
-          }),
-          { r: 0, g: 0, b: 0 },
-        );
-
-        capturedColor = `rgb(${pixel.r / pixels.length}, ${pixel.g / pixels.length}, ${pixel.b / pixels.length})`;
+      if (!webcamRef.current || !canvasRef.current) {
+        throw new Error("Camera not available");
       }
 
-      const hexColor = ColorSDK.rgbToHex(capturedColor);
-      setCurrentColor(hexColor);
+      const video = webcamRef.current.video as HTMLVideoElement;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
 
-      const result = ColorSDK.calculateScore(
-        gameState.targetColor,
-        hexColor,
-        gameState.startTime,
-        Date.now(),
-      );
-
-      setLastResult(result);
-
-      // Update best score if this attempt is better
-      const newBestScore = Math.max(gameState.bestScore, result.finalScore);
-
-      setGameState((prev) => ({
-        ...prev,
-        score: result.finalScore,
-        gameHistory: [...prev.gameHistory, result],
-        bestScore: newBestScore,
-      }));
-
-      // Show result for a moment before allowing another attempt
-      setShowResult(true);
-      setTimeout(() => {
-        setShowResult(false);
-        endGame();
-      }, 3000);
-
-      // If it's daily mode, save to database (which will auto-submit to leaderboard)
-      if (gameState.dailyMode) {
-        try {
-          // First, save the game attempt to get an attemptId
-          const attemptResponse = await fetch("/api/game/attempt", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              gameMode: "daily",
-              targetColor: gameState.targetColor,
-              capturedColor: hexColor,
-              similarity: result.similarity,
-              timeTaken: result.timeTaken / 1000, // Convert to seconds
-              timeScore: result.timeScore,
-              finalScore: result.finalScore,
-              date: new Date().toISOString().split("T")[0],
-            }),
-          });
-
-          if (attemptResponse.ok) {
-            const attemptData = await attemptResponse.json();
-
-            // Update daily stats with the attemptId (this will auto-submit to leaderboard if new best)
-            await fetch("/api/daily/stats", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                score: result.finalScore,
-                date: new Date().toISOString().split("T")[0],
-                timeTaken: result.timeTaken / 1000,
-                attemptId: attemptData.attemptId,
-              }),
-            });
-          }
-        } catch (error) {
-          console.error("Failed to save game attempt:", error);
-        }
+      if (!ctx || !video.videoWidth || !video.videoHeight) {
+        throw new Error("Video not ready");
       }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+      // Capture the screenshot
+      const screenshot = webcamRef.current.getScreenshot();
+      setCapturedImage(screenshot);
+      setGameStage("captured");
     } catch (error) {
-      console.error("Error capturing color:", error);
-      setError("Failed to capture color. Please try again.");
+      console.error("Color capture failed:", error);
+      setCameraError("Failed to capture color. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [
-    gameState.isPlaying,
-    gameState.targetColor,
-    gameState.startTime,
-    gameState.practiceMode,
-    gameState.dailyMode,
-    gameState.bestScore,
-    endGame,
-  ]);
+  }, [gameState.isPlaying, gameFinished, isLoading]);
 
-  const resetGame = useCallback(() => {
-    setGameState({
-      isPlaying: false,
-      targetColor: "",
-      startTime: 0,
-      score: 0,
-      gameHistory: [],
-      practiceMode: false,
-      dailyMode: false,
-      attempts: 0,
-      bestScore: 0,
-    });
-    setCurrentColor("");
-    setLastResult(null);
+  const retakePhoto = useCallback(() => {
+    setCapturedImage(null);
+    setGameStage("camera");
+  }, []);
+
+  const submitResult = useCallback(
+    async (onScoreSubmit: (score: number, timeTaken: number) => void) => {
+      if (!capturedImage) return;
+
+      try {
+        const img = new globalThis.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!canvas || !ctx) return;
+
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          // Get color from center
+          const centerX = Math.floor(canvas.width / 2);
+          const centerY = Math.floor(canvas.height / 2);
+          const pixel = ctx.getImageData(centerX, centerY, 1, 1).data;
+          const capturedColorRGB = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+
+          // Store the captured color
+          setCapturedColor(capturedColorRGB);
+          // Calculate score using ColorSDK
+          const result = ColorSDK.calculateScore(
+            gameState.targetColor,
+            capturedColorRGB,
+            gameState.startTime,
+            Date.now(),
+          );
+          const score = Math.round(result.finalScore);
+
+          setGameFinished(true);
+          setGameState((prev) => ({ ...prev, score }));
+          stopTimer();
+
+          onScoreSubmit(score, timer * 1000);
+        };
+        img.src = capturedImage;
+      } catch (error) {
+        console.error("Submit failed:", error);
+      }
+    },
+    [
+      capturedImage,
+      gameState.targetColor,
+      gameState.startTime,
+      timer,
+      stopTimer,
+    ],
+  );
+
+  const resetFindColorGame = useCallback(() => {
+    setGameFinished(false);
     setTimer(0);
+    setCapturedImage(null);
+    setCapturedColor(null);
+    setGameStage("initial");
+    setCameraError(null);
     setError(null);
-    setShowResult(false);
     stopTimer();
   }, [stopTimer]);
 
-  const setNewTargetColor = useCallback((color: string) => {
-    setGameState((prev) => ({
-      ...prev,
-      targetColor: color,
-      practiceMode: true,
-    }));
-  }, []);
+  // Fix existing method signatures
+  const handleWebcamErrorFixed = useCallback((error: string | DOMException) => {
+    let message = "Camera initialization failed.";
 
-  const startDailyMode = useCallback(async () => {
-    try {
-      const response = await fetch("/api/daily");
-      const data = await response.json();
-
-      if (data.color) {
-        setDailyColor(data.color);
-        setGameState((prev) => ({
-          ...prev,
-          dailyMode: true,
-          practiceMode: false,
-          targetColor: data.color,
-          attempts: 0,
-          bestScore: 0,
-        }));
-      } else {
-        setError("Failed to load daily color");
-      }
-    } catch {
-      setError("Failed to load daily color");
+    if (typeof error === "object" && error.name === "NotAllowedError") {
+      message =
+        "Camera access denied. Please allow camera permissions and refresh the page.";
+    } else if (typeof error === "object" && error.name === "NotFoundError") {
+      message = "No camera found on this device.";
+    } else if (typeof error === "object" && error.name === "NotReadableError") {
+      message =
+        "Camera is in use by another application. Please close other apps using the camera.";
+    } else if (
+      typeof error === "object" &&
+      error.name === "OverconstrainedError"
+    ) {
+      message =
+        "Camera doesn't support the required resolution. Please try a different camera.";
+    } else if (typeof error === "object" && error.name === "SecurityError") {
+      message =
+        "Camera access blocked for security reasons. Please check your browser settings.";
     }
+
+    setCameraError(message);
+    setWebcamReady(false);
   }, []);
 
-  // Computed values
-  const getAverageScore = useCallback(() => {
-    if (gameState.gameHistory.length === 0) return 0;
-    const total = gameState.gameHistory.reduce(
-      (sum, result) => sum + result.finalScore,
-      0,
-    );
-    return Math.round(total / gameState.gameHistory.length);
-  }, [gameState.gameHistory]);
-
-  const getBestScore = useCallback(() => {
-    if (gameState.gameHistory.length === 0) return 0;
-    return Math.max(
-      ...gameState.gameHistory.map((result) => result.finalScore),
-    );
-  }, [gameState.gameHistory]);
-
-  const getWorstScore = useCallback(() => {
-    if (gameState.gameHistory.length === 0) return 0;
-    return Math.min(
-      ...gameState.gameHistory.map((result) => result.finalScore),
-    );
-  }, [gameState.gameHistory]);
-
-  const getTotalGames = useCallback(
-    () => gameState.gameHistory.length,
-    [gameState.gameHistory],
-  );
-
-  const getTotalPlayTime = useCallback(() => {
-    return gameState.gameHistory.reduce(
-      (total, result) => total + result.timeTaken,
-      0,
-    );
-  }, [gameState.gameHistory]);
+  const setNewTargetColorFixed = useCallback(() => {
+    const colors = [
+      "#FF0000",
+      "#00FF00",
+      "#0000FF",
+      "#FFFF00",
+      "#FF00FF",
+      "#00FFFF",
+    ];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    setGameState((prev) => ({ ...prev, targetColor: randomColor }));
+  }, []);
 
   return {
+    // Core game state
     gameState,
-    currentColor,
-    lastResult,
     timer,
     isLoading,
     error,
     webcamReady,
     webcamRef,
     canvasRef,
-    startGame,
-    endGame,
-    captureColor,
-    resetGame,
+
+    // Find Color Game specific state
+    gameFinished,
+    capturedImage,
+    capturedColor,
+    gameStage,
+    cameraError,
+
+    // Find Color Game methods
+    initializeGame,
+    openCamera,
+    captureColorPhoto,
+    retakePhoto,
+    submitResult,
+    resetFindColorGame,
+
+    // Webcam handlers
     handleWebcamReady,
     handleWebcamError,
-    setNewTargetColor,
-    startDailyMode,
-    showResult,
-    dailyColor,
-    getAverageScore,
-    getBestScore,
-    getWorstScore,
-    getTotalGames,
-    getTotalPlayTime,
+
+    // Timer management
+    startTimer,
+    stopTimer,
+    updateTimer: setTimer,
   };
 };

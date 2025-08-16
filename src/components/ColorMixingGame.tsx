@@ -1,19 +1,13 @@
 "use client";
 
-import { Button } from "./ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
-import { Badge } from "./ui/badge";
+import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { useColorMixingGame } from "@/lib/useColorMixingGame";
+import { useGameContext } from "@/lib/GameContext";
 
 interface ColorMixingGameProps {
-  targetColor?: string; // For multiplayer mode
-  onScoreSubmit?: (score: number, timeTaken: number) => void; // For multiplayer mode
+  targetColor?: string;
+  onScoreSubmit?: (score: number, timeTaken: number) => void;
   isMultiplayer?: boolean;
   disabled?: boolean;
 }
@@ -21,65 +15,62 @@ interface ColorMixingGameProps {
 interface ColorSliderProps {
   value: number;
   onChange: (value: number) => void;
-  label: string;
   colorHex: string;
-  min?: number;
-  max?: number;
   disabled?: boolean;
 }
 
 const ColorSlider = ({
   value,
   onChange,
-  label,
   colorHex,
-  min = 0,
-  max = 100,
   disabled = false,
 }: ColorSliderProps) => {
   return (
-    <Card className="p-4">
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <div
-              className="w-6 h-6 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
-              style={{ backgroundColor: colorHex }}
-            />
-            <span className="font-black text-sm uppercase tracking-wide">
-              {label}
-            </span>
-          </div>
-          <Badge variant="outline" className="font-mono text-lg px-4 py-2">
-            {value}%
-          </Badge>
-        </div>
-
-        <div className="relative">
-          <input
-            type="range"
-            min={min}
-            max={max}
-            value={value}
-            onChange={(e) => onChange(parseInt(e.target.value))}
-            disabled={disabled}
-            className="w-full h-4 bg-muted border-4 border-foreground appearance-none cursor-pointer slider shadow-[4px_4px_0px_hsl(var(--foreground))] disabled:opacity-50 disabled:cursor-not-allowed"
+    <div className="flex items-center w-full gap-[30px]">
+      <div className="relative w-[318px] h-[48px]">
+        {/* Track Background */}
+        <div className="absolute top-[5px] w-[318px] h-[38px] bg-white border border-black rounded-[21px]">
+          {/* Filled Rectangle */}
+          <div
+            className="absolute top-[1px] left-[1px] h-[36px] rounded-[20px] border-l border-black transition-all duration-200"
             style={{
-              background: `linear-gradient(to right, ${colorHex} 0%, ${colorHex} ${value}%, hsl(var(--muted)) ${value}%, hsl(var(--muted)) 100%)`,
+              backgroundColor: colorHex,
+              width: `${(value / 100) * 315}px`,
             }}
           />
-          <div className="flex justify-between text-xs font-bold uppercase tracking-wide text-muted-foreground mt-2">
-            <span>{min}%</span>
-            <span>{max}%</span>
-          </div>
         </div>
+
+        {/* Slider Handle */}
+        <div
+          className="absolute top-0 w-[48px] h-[48px] rounded-full border-[4px] border-black bg-white transition-all duration-200 cursor-pointer"
+          style={{
+            backgroundColor: colorHex,
+            left: `${(value / 100) * 270}px`,
+          }}
+        />
+
+        {/* Hidden range input for interaction */}
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value))}
+          disabled={disabled}
+          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+        />
       </div>
-    </Card>
+
+      {/* Percentage Label */}
+      <div className="text-[22px] font-hartone leading-[16px] tracking-[7.5%] text-black text-right min-w-[40px]">
+        {value}%
+      </div>
+    </div>
   );
 };
 
 export const ColorMixingGame = ({
-  targetColor,
+  targetColor = "#A6C598",
   onScoreSubmit,
   isMultiplayer = false,
   disabled = false,
@@ -87,17 +78,11 @@ export const ColorMixingGame = ({
   // Use the color mixing game hook
   const {
     state,
-    showHelp,
     targetColorHex,
     mixedColorHex,
-    recentAttempts,
-    stats,
     handleSliderChange,
     handleShadingChange,
     handleMix,
-    handleReset,
-    handleNewChallenge,
-    toggleHelp,
     getColorHex,
   } = useColorMixingGame({
     isMultiplayer,
@@ -105,417 +90,140 @@ export const ColorMixingGame = ({
     onScoreSubmit,
   });
 
-  const handleBackToMenu = () => {
-    window.location.href = "/";
-  };
+  // Get game context to sync timer
+  const gameContext = useGameContext();
 
-  const getScoreCategory = (
-    score: number,
-    isMultiplayerMode: boolean = false,
-  ) => {
-    if (score >= 90) return { text: "PERFECT", variant: "success" as const };
-    if (score >= 80) return { text: "EXCELLENT", variant: "success" as const };
-    if (score >= 70) return { text: "GREAT", variant: "accent" as const };
-    if (score >= 60) return { text: "GOOD", variant: "secondary" as const };
-    if (score >= 40) return { text: "OKAY", variant: "warning" as const };
-    return {
-      text: isMultiplayerMode ? "SUBMITTED" : "KEEP TRYING",
-      variant: "destructive" as const,
-    };
-  };
+  // Sync the timer with the game context so header can display it
+  useEffect(() => {
+    if (gameContext && state.timer !== undefined && gameContext.updateTimer) {
+      // Update the game context timer with the mixing game timer
+      gameContext.updateTimer(state.timer);
+    }
+  }, [state.timer, gameContext]);
 
+  // Don't render if no challenge loaded
   if (!state.currentChallenge) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center font-mono">
+      <div className="flex flex-col items-center gap-4 w-full max-w-[378px] mx-auto">
         <div className="text-center">
-          <div className="font-black text-4xl uppercase tracking-wide mb-4">
-            LOADING CHALLENGE...
+          <div className="font-hartone text-xl uppercase tracking-wide mb-4">
+            Loading challenge...
           </div>
-          <div className="w-16 h-16 border-8 border-foreground animate-spin mx-auto"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 font-mono">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="text-center space-y-4">
-          <h1 className="font-black text-6xl md:text-8xl uppercase tracking-tighter leading-none mb-4">
-            🎨 COLOR
-            <br />
-            <span className="text-accent">MIXING</span>
-          </h1>
-          <p className="font-black text-xl uppercase tracking-wide text-muted-foreground mb-4">
-            MIX COLORS TO MATCH THE TARGET
-          </p>
-          <div className="flex justify-center items-center space-x-4 font-bold text-sm uppercase tracking-wide">
-            <Badge variant="outline">ATTEMPTS: {stats.totalAttempts}</Badge>
-            {state.startTime && state.isPlaying && (
-              <Badge variant="accent">⏱️ {state.timer}s</Badge>
-            )}
+    <div className="flex flex-col items-center gap-[55px] w-full max-w-[378px] mx-auto">
+      {/* Target and Your Color Display */}
+      <div className="flex flex-col items-center gap-[17px] w-full">
+        {/* Color Display */}
+        <div
+          className="relative w-full h-[88px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)]"
+          style={{ backgroundColor: targetColorHex }}
+        >
+          {/* Right half showing mixed color */}
+          <div
+            className="absolute right-0 top-0 w-1/2 h-full border-l border-black"
+            style={{ backgroundColor: mixedColorHex }}
+          />
+        </div>
+
+        {/* Labels */}
+        <div className="flex justify-between items-center w-[287px]">
+          <div className="px-1">
+            <div className="text-[14px] font-sintony font-bold leading-[16px] tracking-[-1%] text-black">
+              Target colour
+            </div>
+          </div>
+          <div className="text-[14px] font-sintony font-bold leading-[16px] tracking-[-1%] text-black">
+            Your colour
           </div>
         </div>
-
-        {/* Top Bar */}
-        <div className="flex justify-between items-center">
-          {!isMultiplayer && (
-            <Button onClick={handleBackToMenu} variant="outline" size="sm">
-              ← BACK TO MENU
-            </Button>
-          )}
-
-          {!isMultiplayer && (
-            <Button onClick={toggleHelp} variant="secondary" size="sm">
-              💡 {showHelp ? "HIDE" : "SHOW"} SOLUTION
-            </Button>
-          )}
-        </div>
-
-        {/* Color Display Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Target Color */}
-          <Card>
-            <CardHeader>
-              <CardTitle>🎯 TARGET COLOR</CardTitle>
-              <CardDescription>MATCH THIS EXACT COLOR</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <div
-                  className="w-full h-48 border-8 border-foreground shadow-[16px_16px_0px_hsl(var(--foreground))]"
-                  style={{ backgroundColor: targetColorHex }}
-                />
-                {!isMultiplayer && (
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="outline" className="bg-background/90">
-                      {targetColorHex}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Mixed Color */}
-          <Card>
-            <CardHeader>
-              <CardTitle>🧪 YOUR MIX</CardTitle>
-              <CardDescription>CURRENT MIXTURE RESULT</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <div
-                  className="w-full h-48 border-8 border-foreground shadow-[16px_16px_0px_hsl(var(--foreground))]"
-                  style={{ backgroundColor: mixedColorHex }}
-                />
-                {!isMultiplayer && (
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="outline" className="bg-background/90">
-                      {mixedColorHex}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Color Sliders Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>🎛️ MIXING CONTROLS</CardTitle>
-            <CardDescription>
-              ADJUST THESE COLORS TO CREATE YOUR MIX
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Primary Color 1 */}
-              <ColorSlider
-                value={state.colorPercentages.color1.percentage}
-                onChange={(value) => handleSliderChange("color1", value)}
-                label={state.colorPercentages.color1.label}
-                colorHex={getColorHex(
-                  state.colorPercentages.color1.color.r,
-                  state.colorPercentages.color1.color.g,
-                  state.colorPercentages.color1.color.b,
-                )}
-                disabled={disabled}
-              />
-
-              {/* Primary Color 2 */}
-              <ColorSlider
-                value={state.colorPercentages.color2.percentage}
-                onChange={(value) => handleSliderChange("color2", value)}
-                label={state.colorPercentages.color2.label}
-                colorHex={getColorHex(
-                  state.colorPercentages.color2.color.r,
-                  state.colorPercentages.color2.color.g,
-                  state.colorPercentages.color2.color.b,
-                )}
-                disabled={disabled}
-              />
-
-              {/* Distractor Color */}
-              <ColorSlider
-                value={state.colorPercentages.distractor.percentage}
-                onChange={(value) => handleSliderChange("distractor", value)}
-                label={state.colorPercentages.distractor.label}
-                colorHex={getColorHex(
-                  state.colorPercentages.distractor.color.r,
-                  state.colorPercentages.distractor.color.g,
-                  state.colorPercentages.distractor.color.b,
-                )}
-                disabled={disabled}
-              />
-
-              {/* White Shading */}
-              <ColorSlider
-                value={state.colorPercentages.white}
-                onChange={(value) => handleShadingChange("white", value)}
-                label="White"
-                colorHex="#FFFFFF"
-                disabled={disabled}
-              />
-
-              {/* Black Shading */}
-              <ColorSlider
-                value={state.colorPercentages.black}
-                onChange={(value) => handleShadingChange("black", value)}
-                label="Black"
-                colorHex="#000000"
-                disabled={disabled}
-              />
-            </div>
-
-            {/* Color Palette Info */}
-            <Card className="bg-muted border-4 border-foreground">
-              <CardContent className="p-4">
-                <h3 className="font-black text-sm uppercase tracking-wide mb-4">
-                  🎨 AVAILABLE COLORS:
-                </h3>
-                <div className="flex flex-wrap gap-4">
-                  {[
-                    {
-                      color: state.colorPercentages.color1.color,
-                      label: state.colorPercentages.color1.label,
-                    },
-                    {
-                      color: state.colorPercentages.color2.color,
-                      label: state.colorPercentages.color2.label,
-                    },
-                    {
-                      color: state.colorPercentages.distractor.color,
-                      label: state.colorPercentages.distractor.label,
-                    },
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div
-                        className="w-6 h-6 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]"
-                        style={{
-                          backgroundColor: getColorHex(
-                            item.color.r,
-                            item.color.g,
-                            item.color.b,
-                          ),
-                        }}
-                      />
-                      <span className="font-bold text-sm uppercase tracking-wide">
-                        {item.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button
-                onClick={handleMix}
-                variant="accent"
-                size="lg"
-                className="text-xl"
-                disabled={disabled || state.showResults}
-              >
-                🎨 MIX COLORS!
-              </Button>
-
-              {!isMultiplayer && (
-                <Button
-                  onClick={handleReset}
-                  variant="secondary"
-                  size="lg"
-                  className="text-xl"
-                  disabled={disabled}
-                >
-                  🔄 RESET
-                </Button>
-              )}
-
-              {!isMultiplayer && (
-                <Button
-                  onClick={handleNewChallenge}
-                  variant="success"
-                  size="lg"
-                  className="text-xl"
-                >
-                  🎯 NEW CHALLENGE
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results Section */}
-        {state.showResults && state.lastScore !== null && (
-          <Card className="bg-accent border-accent">
-            <CardHeader>
-              <CardTitle className="text-accent-foreground">
-                🏆 MIXING RESULTS
-              </CardTitle>
-              <CardDescription className="text-accent-foreground/80">
-                YOUR COLOR MATCHING PERFORMANCE
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {(() => {
-                const scoreCategory = getScoreCategory(
-                  state.lastScore,
-                  isMultiplayer,
-                );
-
-                return (
-                  <>
-                    <div className="text-center">
-                      <div className="font-black text-8xl uppercase tracking-tighter leading-none mb-4 text-accent-foreground">
-                        {state.lastScore}%
-                      </div>
-                      <Badge
-                        variant={scoreCategory.variant}
-                        className="text-2xl px-8 py-3"
-                      >
-                        {scoreCategory.text}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 border-4 border-accent-foreground bg-accent-foreground/10">
-                        <div className="font-black text-2xl text-accent-foreground">
-                          {state.lastScore}%
-                        </div>
-                        <div className="font-bold text-sm uppercase tracking-wide text-accent-foreground/80">
-                          MATCH
-                        </div>
-                      </div>
-                      <div className="text-center p-4 border-4 border-accent-foreground bg-accent-foreground/10">
-                        <div className="font-black text-2xl text-accent-foreground">
-                          {state.timer}s
-                        </div>
-                        <div className="font-bold text-sm uppercase tracking-wide text-accent-foreground/80">
-                          TIME
-                        </div>
-                      </div>
-                      <div className="text-center p-4 border-4 border-accent-foreground bg-accent-foreground/10">
-                        <div className="font-black text-2xl text-accent-foreground">
-                          {stats.averageScore}%
-                        </div>
-                        <div className="font-bold text-sm uppercase tracking-wide text-accent-foreground/80">
-                          AVG SCORE
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Help Section */}
-        {!isMultiplayer && showHelp && (
-          <Card className="bg-secondary border-secondary">
-            <CardHeader>
-              <CardTitle className="text-secondary-foreground">
-                💡 MIXING SOLUTION
-              </CardTitle>
-              <CardDescription className="text-secondary-foreground/80">
-                HOW TO APPROACH THIS COLOR
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="font-bold text-secondary-foreground uppercase tracking-wide space-y-2">
-                <p>
-                  🎨 Start with the two main colors that best match your target
-                </p>
-                <p>🔧 Adjust percentages to get the right hue balance</p>
-                <p>⚪ Add white to lighten if the target is bright</p>
-                <p>⚫ Add black to darken if the target is deep</p>
-                <p>🎯 Fine-tune with the third color for perfect matching</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* History Section */}
-        {!isMultiplayer && recentAttempts.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>📜 RECENT ATTEMPTS</CardTitle>
-              <CardDescription>
-                YOUR LAST {recentAttempts.length} MIXING ATTEMPTS
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {recentAttempts.map((attempt, index) => (
-                  <div
-                    key={index}
-                    className="p-4 border-4 border-foreground space-y-3"
-                  >
-                    <div className="flex space-x-2">
-                      <div
-                        className="w-12 h-12 border-4 border-foreground"
-                        style={{
-                          backgroundColor: getColorHex(
-                            attempt.targetColor.r,
-                            attempt.targetColor.g,
-                            attempt.targetColor.b,
-                          ),
-                        }}
-                      />
-                      <div
-                        className="w-12 h-12 border-4 border-foreground"
-                        style={{
-                          backgroundColor: getColorHex(
-                            attempt.mixedColor.r,
-                            attempt.mixedColor.g,
-                            attempt.mixedColor.b,
-                          ),
-                        }}
-                      />
-                    </div>
-                    <div className="font-bold text-sm uppercase tracking-wide">
-                      SCORE: {attempt.matchPercentage}% | TIME:{" "}
-                      {attempt.timeTaken}s
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Footer Tip */}
-        <div className="text-center">
-          <Badge variant="outline" className="text-lg px-6 py-3">
-            💡 TIP: MIX AVAILABLE COLORS TO MATCH THE TARGET, THEN ADJUST WITH
-            WHITE/BLACK
-          </Badge>
-        </div>
       </div>
+
+      {/* Color Sliders */}
+      <div className="flex flex-col gap-[24px] w-full">
+        {/* Primary Color 1 */}
+        <ColorSlider
+          value={state.colorPercentages.color1.percentage}
+          onChange={(value) => handleSliderChange("color1", value)}
+          colorHex={getColorHex(
+            state.colorPercentages.color1.color.r,
+            state.colorPercentages.color1.color.g,
+            state.colorPercentages.color1.color.b,
+          )}
+          disabled={disabled}
+        />
+
+        {/* Primary Color 2 */}
+        <ColorSlider
+          value={state.colorPercentages.color2.percentage}
+          onChange={(value) => handleSliderChange("color2", value)}
+          colorHex={getColorHex(
+            state.colorPercentages.color2.color.r,
+            state.colorPercentages.color2.color.g,
+            state.colorPercentages.color2.color.b,
+          )}
+          disabled={disabled}
+        />
+
+        {/* Distractor Color */}
+        <ColorSlider
+          value={state.colorPercentages.distractor.percentage}
+          onChange={(value) => handleSliderChange("distractor", value)}
+          colorHex={getColorHex(
+            state.colorPercentages.distractor.color.r,
+            state.colorPercentages.distractor.color.g,
+            state.colorPercentages.distractor.color.b,
+          )}
+          disabled={disabled}
+        />
+
+        {/* White Shading */}
+        <ColorSlider
+          value={state.colorPercentages.white}
+          onChange={(value) => handleShadingChange("white", value)}
+          colorHex="#FFFFFF"
+          disabled={disabled}
+        />
+
+        {/* Black Shading */}
+        <ColorSlider
+          value={state.colorPercentages.black}
+          onChange={(value) => handleShadingChange("black", value)}
+          colorHex="#000000"
+          disabled={disabled}
+        />
+      </div>
+
+      {/* Submit Button */}
+      <button
+        onClick={async () => {
+          const attempt = await handleMix();
+          console.log("Mix submitted:", attempt);
+          if (attempt && onScoreSubmit) {
+            const timeTaken = state.startTime
+              ? Math.floor((Date.now() - state.startTime) / 1000)
+              : 0;
+            onScoreSubmit(attempt.matchPercentage, timeTaken);
+          }
+        }}
+        disabled={disabled || state.showResults}
+        className={cn(
+          "w-full h-[51px] bg-[#FFE254] border border-black rounded-[39px] shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]",
+          "text-[30px] font-hartone leading-[33px] tracking-[7.5%] text-black",
+          "flex items-center justify-center",
+          "transition-all duration-150",
+          "hover:shadow-[0px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px]",
+          "active:shadow-none active:translate-y-[4px]",
+          disabled &&
+            "opacity-50 cursor-not-allowed hover:shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0",
+        )}
+      >
+        SUBMIT
+      </button>
     </div>
   );
 };

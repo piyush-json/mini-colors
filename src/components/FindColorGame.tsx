@@ -1,21 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "./ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
-import { Badge } from "./ui/badge";
+import { useEffect } from "react";
+import { Camera } from "lucide-react";
 import Webcam from "react-webcam";
-import { ColorSDK } from "@/lib/color-sdk";
-
+import Image from "next/image";
+import { useGameContextRequired } from "@/lib/GameContext";
+import { cn } from "@/lib/utils";
 interface FindColorGameProps {
   targetColor: string;
   onScoreSubmit: (score: number, timeTaken: number) => void;
   isMultiplayer?: boolean;
-  disabled?: boolean;
   className?: string;
 }
 
@@ -23,306 +15,175 @@ export const FindColorGame = ({
   targetColor,
   onScoreSubmit,
   isMultiplayer = false,
-  disabled = false,
   className = "",
 }: FindColorGameProps) => {
-  const [timer, setTimer] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [webcamReady, setWebcamReady] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gameFinished, setGameFinished] = useState(false);
-  const [lastScore, setLastScore] = useState<number | null>(null);
-
-  const webcamRef = useRef<Webcam>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timerInterval = useRef<NodeJS.Timeout | null>(null);
-
-  // Timer management
-  useEffect(() => {
-    if (gameStarted && !gameFinished && !disabled) {
-      timerInterval.current = setInterval(() => {
-        setTimer((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-        timerInterval.current = null;
-      }
-    }
-
-    return () => {
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-      }
-    };
-  }, [gameStarted, gameFinished, disabled]);
-
-  // Auto-start for multiplayer mode
-  useEffect(() => {
-    if (isMultiplayer && !disabled) {
-      setGameStarted(true);
-      setTimer(0);
-      setGameFinished(false);
-      setLastScore(null);
-    }
-  }, [isMultiplayer, disabled, targetColor]);
-
-  const handleWebcamReady = useCallback(() => {
-    setWebcamReady(true);
-    setCameraError(null);
-  }, []);
-
-  const handleWebcamError = useCallback((error: string | DOMException) => {
-    let message = "Camera initialization failed.";
-
-    if (typeof error === "object" && error.name === "NotAllowedError") {
-      message =
-        "Camera access denied. Please allow camera permissions and refresh the page.";
-    } else if (typeof error === "object" && error.name === "NotFoundError") {
-      message = "No camera found on this device.";
-    } else if (typeof error === "object" && error.name === "NotReadableError") {
-      message =
-        "Camera is in use by another application. Please close other apps using the camera.";
-    } else if (
-      typeof error === "object" &&
-      error.name === "OverconstrainedError"
-    ) {
-      message =
-        "Camera doesn't support the required resolution. Please try a different camera.";
-    } else if (typeof error === "object" && error.name === "SecurityError") {
-      message =
-        "Camera access blocked for security reasons. Please check your browser settings.";
-    }
-
-    setCameraError(message);
-    setWebcamReady(false);
-  }, []);
-
-  const startGame = useCallback(() => {
-    setGameStarted(true);
-    setTimer(0);
-    setGameFinished(false);
-    setLastScore(null);
-  }, []);
-
-  const captureColor = useCallback(async () => {
-    if (!gameStarted || gameFinished || isLoading || disabled) return;
-
-    setIsLoading(true);
-
-    try {
-      if (!webcamRef.current || !canvasRef.current) {
-        throw new Error("Camera not available");
-      }
-
-      const video = webcamRef.current.video as HTMLVideoElement;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx || !video.videoWidth || !video.videoHeight) {
-        throw new Error("Video not ready");
-      }
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-      // Get color from center of the image
-      const centerX = Math.floor(canvas.width / 2);
-      const centerY = Math.floor(canvas.height / 2);
-      const pixel = ctx.getImageData(centerX, centerY, 1, 1).data;
-      const capturedColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
-
-      // Calculate score using ColorSDK
-      const result = ColorSDK.calculateScore(
-        targetColor,
-        capturedColor,
-        Date.now() - timer * 1000,
-        Date.now(),
-      );
-      const score = Math.round(result.finalScore);
-
-      setLastScore(score);
-      setGameFinished(true);
-
-      // Submit score
-      onScoreSubmit(score, timer * 1000);
-    } catch (error) {
-      console.error("Color capture failed:", error);
-      setCameraError("Failed to capture color. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    gameStarted,
-    gameFinished,
+  const {
+    gameStage,
+    capturedImage,
+    webcamReady,
+    cameraError,
     isLoading,
-    disabled,
-    targetColor,
-    timer,
-    onScoreSubmit,
-  ]);
+    gameFinished,
+    webcamRef,
+    canvasRef,
+    initializeGame,
+    openCamera,
+    captureColorPhoto,
+    retakePhoto,
+    submitResult,
+    handleWebcamReady,
+    handleWebcamError,
+  } = useGameContextRequired();
 
-  const resetGame = useCallback(() => {
-    setGameStarted(false);
-    setGameFinished(false);
-    setTimer(0);
-    setLastScore(null);
-    setCameraError(null);
-  }, []);
+  useEffect(() => {
+    initializeGame(targetColor, isMultiplayer);
+  }, [targetColor, isMultiplayer, initializeGame]);
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      <canvas ref={canvasRef} style={{ display: "none" }} />
-
+    <div className={cn("space-y-6 w-full mx-auto", className)}>
       {/* Target Color Display */}
-      <Card>
-        <CardHeader>
-          <CardTitle>🎯 TARGET COLOR</CardTitle>
-          <CardDescription>LOCATE AND DESTROY THIS COLOR</CardDescription>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
+      <div className="flex flex-col items-center gap-4">
+        <div
+          className="w-[373px] h-[88px] border border-black rounded-[12px]"
+          style={{
+            backgroundColor: targetColor,
+            boxShadow: "0px 6px 0px 0px rgba(0, 0, 0, 1)",
+          }}
+        />
+        <p className="font-sintony text-sm font-bold text-black">
+          Target colour
+        </p>
+      </div>
+
+      {/* Game Stage - Initial */}
+      {gameStage === "initial" && (
+        <div className="flex flex-col items-center gap-4">
           <div
-            className="w-32 h-32 mx-auto border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))]"
-            style={{ backgroundColor: targetColor }}
-          />
-          <p className="text-sm font-mono font-black uppercase tracking-wide">
-            {targetColor}
-          </p>
-          <p className="text-sm font-bold uppercase tracking-wide">
-            FIND THIS COLOR IN YOUR SURROUNDINGS AND CAPTURE IT!
-          </p>
+            className="w-[373px] h-[360px] bg-[#FFFFFF] border border-black rounded-[9px] flex flex-col items-center justify-center gap-4 cursor-pointer"
+            style={{ boxShadow: "0px 1.5px 0px 0px rgba(0, 0, 0, 1)" }}
+            onClick={openCamera}
+          >
+            <div className="w-[84px] h-[84px] border border-black rounded-full flex items-center justify-center">
+              <div className="w-[46px] h-[47px] bg-white flex items-center justify-center">
+                <Camera className="w-10 h-9 text-black" />
+              </div>
+            </div>
+            <p className="font-sintony text-sm font-normal text-black text-center">
+              Tap to open up the camera
+            </p>
+          </div>
 
-          {gameStarted && !gameFinished && (
-            <Badge variant="outline" className="text-lg">
-              TIME: {timer}S
-            </Badge>
-          )}
+          <div
+            className={cn(
+              "w-[373px] h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
+              "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed",
+            )}
+            style={{
+              boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
+              letterSpacing: "7.5%",
+            }}
+          >
+            FOUND IT
+          </div>
+        </div>
+      )}
 
-          {lastScore !== null && (
-            <Badge
-              variant={
-                lastScore >= 80
-                  ? "success"
-                  : lastScore >= 60
-                    ? "accent"
-                    : lastScore >= 40
-                      ? "secondary"
-                      : "destructive"
-              }
-              className="text-xl"
-            >
-              SCORE: {lastScore}%
-            </Badge>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Camera View */}
-      <Card>
-        <CardHeader>
-          <CardTitle>📷 CAMERA VIEW</CardTitle>
-          <CardDescription>DESTRUCTION TARGETING SYSTEM</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
-            <Webcam
-              ref={webcamRef}
-              audio={false}
-              screenshotFormat="image/jpeg"
-              className={`w-full h-64 object-cover border-8 border-foreground shadow-[8px_8px_0px_hsl(var(--foreground))] ${
-                webcamReady ? "border-success" : "border-foreground opacity-50"
-              }`}
-              videoConstraints={{
-                facingMode: "user",
-                width: { ideal: 640, min: 320 },
-                height: { ideal: 480, min: 240 },
-                frameRate: { ideal: 30, min: 15 },
-              }}
-              onUserMedia={handleWebcamReady}
-              onUserMediaError={handleWebcamError}
-            />
-
-            {webcamReady && gameStarted && !gameFinished && (
+      {/* Game Stage - Camera */}
+      {gameStage === "camera" && (
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-[373px] h-[360px] border border-black rounded-[9px] overflow-hidden">
+            {cameraError ? (
+              <div className="w-full h-full bg-red-100 border border-red-300 rounded flex items-center justify-center p-4">
+                <p className="text-red-600 text-sm text-center">
+                  {cameraError}
+                </p>
+              </div>
+            ) : (
               <>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                  <div className="w-16 h-16 border-4 border-white rounded-full pointer-events-none shadow-lg animate-pulse" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-2 border-red-500 rounded-full" />
-                </div>
-                <div className="absolute top-2 right-2">
-                  <Badge variant="success" className="font-black tracking-wide">
-                    LIVE
-                  </Badge>
+                <Webcam
+                  ref={webcamRef}
+                  audio={false}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={{
+                    facingMode: { ideal: "environment" },
+                    width: 640,
+                    height: 480,
+                  }}
+                  onUserMedia={handleWebcamReady}
+                  onUserMediaError={handleWebcamError}
+                  className="w-full h-full object-cover"
+                />
+                <canvas ref={canvasRef} className="hidden" />
+
+                {/* Red circle crosshair overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[54px] h-[54px] border-4 border-[#EF4E4E] rounded-full"></div>
                 </div>
               </>
             )}
           </div>
 
-          {cameraError && (
-            <div className="p-3 border-4 border-destructive bg-destructive/10 shadow-[4px_4px_0px_hsl(var(--destructive))]">
-              <p className="text-destructive font-mono font-black uppercase tracking-wide text-sm">
-                {cameraError}
-              </p>
-            </div>
-          )}
-
-          {/* Game Controls */}
-          <div className="space-y-2">
-            {!gameStarted && !isMultiplayer && (
-              <Button
-                onClick={startGame}
-                variant="default"
-                size="lg"
-                className="w-full"
-                disabled={!webcamReady || disabled}
-              >
-                🚀 START GAME
-              </Button>
+          <div
+            className={cn(
+              "w-[373px] h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
+              {
+                "bg-[#FFE254] text-black cursor-pointer":
+                  webcamReady && !isLoading,
+                "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed":
+                  !webcamReady || isLoading,
+              },
             )}
+            style={{
+              boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
+              letterSpacing: "7.5%",
+            }}
+            onClick={isLoading || !webcamReady ? undefined : captureColorPhoto}
+          >
+            {isLoading ? "CAPTURING..." : "FOUND IT"}
+          </div>
+        </div>
+      )}
 
-            {gameStarted && !gameFinished && (
-              <Button
-                onClick={captureColor}
-                variant="default"
-                size="lg"
-                className="w-full"
-                disabled={isLoading || !webcamReady || disabled}
+      {/* Game Stage - Captured */}
+      {gameStage === "captured" && capturedImage && (
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-[373px] h-[360px] border border-black rounded-[9px] overflow-hidden">
+            <Image
+              src={capturedImage}
+              alt="Captured"
+              fill
+              className="object-cover"
+            />
+            {/* Retake button positioned over the image */}
+            <div className="absolute bottom-[30px] left-1/2 transform -translate-x-1/2">
+              <div
+                className="w-[87px] h-[29px] bg-white border border-black rounded-[39px] flex items-center justify-center cursor-pointer font-hartone text-[16px] font-normal text-black"
+                style={{
+                  boxShadow: "0px 2px 0px 0px rgba(0, 0, 0, 1)",
+                  letterSpacing: "7.5%",
+                }}
+                onClick={retakePhoto}
               >
-                {isLoading ? "📸 CAPTURING..." : "📸 CAPTURE COLOR"}
-              </Button>
-            )}
-
-            {gameFinished && !isMultiplayer && (
-              <div className="space-y-2">
-                <Button
-                  onClick={resetGame}
-                  variant="default"
-                  size="lg"
-                  className="w-full"
-                >
-                  🔄 PLAY AGAIN
-                </Button>
+                Retake
               </div>
-            )}
+            </div>
           </div>
 
-          {webcamReady ? (
-            <div className="p-2 border-2 border-success bg-success/10">
-              <p className="text-success font-mono font-black uppercase tracking-wide text-sm text-center">
-                CAMERA READY! POINT THE CROSSHAIR AT THE TARGET COLOR AND
-                CAPTURE.
-              </p>
-            </div>
-          ) : (
-            <div className="p-2 border-2 border-foreground bg-muted">
-              <p className="font-mono font-black uppercase tracking-wide text-sm text-center">
-                SETTING UP CAMERA...
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <div
+            className="w-[373px] h-[51px] bg-[#FFE254] border border-black rounded-[39px] flex items-center justify-center cursor-pointer font-hartone text-[30px] font-normal text-black"
+            style={{
+              boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
+              letterSpacing: "7.5%",
+            }}
+            onClick={() => {
+              console.log("Submitting result...");
+              submitResult(onScoreSubmit);
+            }}
+          >
+            SUBMIT
+          </div>
+        </div>
+      )}
     </div>
   );
 };
