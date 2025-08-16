@@ -47,6 +47,7 @@ export interface GameInfo {
   gameType: "findColor" | "colorMixing" | null;
   currentRound: number;
   maxRounds: number;
+  guessTime: number;
   startTime: number | null;
   endTime: number | null;
   playerCount: number;
@@ -69,6 +70,7 @@ export interface SocketEvent {
     | "targetColorChanged"
     | "dennerChanged"
     | "sessionEnded"
+    | "timeExtended"
     | "roomCreated"
     | "roomJoined"
     | "error";
@@ -172,6 +174,11 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
       addEvent("sessionEnded", { gameInfo });
     });
 
+    socket.on("timeExtended", ({ additionalSeconds, gameInfo }) => {
+      setGameInfo(gameInfo);
+      addEvent("timeExtended", { additionalSeconds, gameInfo });
+    });
+
     socket.on("scoreSubmitted", ({ playerId, score, timeTaken, gameInfo }) => {
       setGameInfo(gameInfo);
       addEvent("scoreSubmitted", { playerId, score, timeTaken, gameInfo });
@@ -208,9 +215,21 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
 
   // Create a new game room
   const createRoom = useCallback(
-    (playerName: string, targetColor: string) => {
+    (
+      playerName: string,
+      targetColor: string,
+      options?: {
+        maxPlayers?: number;
+        maxRounds?: number;
+        guessTime?: number;
+      },
+    ) => {
       if (socketRef.current && isConnected) {
-        socketRef.current.emit("createRoom", { playerName, targetColor });
+        socketRef.current.emit("createRoom", {
+          playerName,
+          targetColor,
+          options,
+        });
       }
     },
     [isConnected],
@@ -286,6 +305,16 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     [isConnected],
   );
 
+  // Extend game time (denner only)
+  const extendTime = useCallback(
+    (roomId: string, additionalSeconds: number = 30) => {
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit("extendTime", { roomId, additionalSeconds });
+      }
+    },
+    [isConnected],
+  );
+
   // Set custom target color (denner only)
   const setTargetColor = useCallback(
     (roomId: string, targetColor: string) => {
@@ -352,6 +381,7 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     continueSession,
     endSession,
     submitScore,
+    extendTime,
     setTargetColor,
 
     // Utility methods

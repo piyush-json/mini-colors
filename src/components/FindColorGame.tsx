@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
 import Webcam from "react-webcam";
 import Image from "next/image";
@@ -13,6 +13,7 @@ interface FindColorGameProps {
   ) => void;
   isMultiplayer?: boolean;
   className?: string;
+  timeLimit?: number; // Time limit in seconds
 }
 
 export const FindColorGame = ({
@@ -20,7 +21,11 @@ export const FindColorGame = ({
   onScoreSubmit,
   isMultiplayer = false,
   className = "",
+  timeLimit,
 }: FindColorGameProps) => {
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [gameStartTime, setGameStartTime] = useState<number | null>(null);
+
   const {
     gameStage,
     capturedImage,
@@ -42,11 +47,70 @@ export const FindColorGame = ({
   useEffect(() => {
     if (targetColor) {
       initializeGame(targetColor, isMultiplayer);
+      if (timeLimit) {
+        setTimeRemaining(timeLimit);
+        setGameStartTime(Date.now());
+      }
     }
-  }, [targetColor, isMultiplayer, initializeGame]);
+  }, [targetColor, isMultiplayer, timeLimit, initializeGame]);
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (
+      timeLimit &&
+      timeRemaining !== null &&
+      timeRemaining > 0 &&
+      !gameFinished
+    ) {
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev === null || prev <= 1) {
+            // Time's up - auto submit with 0 score
+            const timeTaken = gameStartTime
+              ? Math.floor((Date.now() - gameStartTime) / 1000)
+              : timeLimit;
+            onScoreSubmit(0, timeTaken, targetColor || undefined);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [
+    timeLimit,
+    timeRemaining,
+    gameFinished,
+    onScoreSubmit,
+    targetColor,
+    gameStartTime,
+  ]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   return (
     <div className={cn("space-y-6 w-full mx-auto", className)}>
+      {/* Timer Display */}
+      {timeLimit && timeRemaining !== null && (
+        <div className="flex justify-center">
+          <div
+            className={cn(
+              "px-4 py-2 border-2 border-black rounded-lg font-hartone text-[18px]",
+              timeRemaining <= 10
+                ? "bg-red-100 text-red-600"
+                : "bg-white text-black",
+            )}
+          >
+            Time: {formatTime(timeRemaining)}
+          </div>
+        </div>
+      )}
+
       {/* Target Color Display */}
       <div className="flex flex-col items-center gap-4">
         <div
@@ -193,7 +257,10 @@ export const FindColorGame = ({
             onClick={() => {
               console.log("Submitting result...");
               submitResult((score: number, timeTaken: number) => {
-                onScoreSubmit(score, timeTaken, targetColor || undefined);
+                const actualTimeTaken = gameStartTime
+                  ? Math.floor((Date.now() - gameStartTime) / 1000)
+                  : timeTaken;
+                onScoreSubmit(score, actualTimeTaken, targetColor || undefined);
               });
             }}
           >

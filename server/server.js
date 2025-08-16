@@ -27,7 +27,7 @@ const playerSessions = new Map();
 
 // Game state management
 class GameRoom {
-  constructor(roomId, hostId, targetColor) {
+  constructor(roomId, hostId, targetColor, options = {}) {
     this.roomId = roomId;
     this.hostId = hostId; // Current denner/host
     this.targetColor = targetColor;
@@ -35,12 +35,13 @@ class GameRoom {
     this.gameState = "lobby"; // lobby, gameSelection, playing, roundFinished, sessionFinished
     this.gameType = null; // "findColor" or "colorMixing"
     this.currentRound = 0;
-    this.maxRounds = 3; // Configurable rounds per session
+    this.maxRounds = options.maxRounds || 3; // Configurable rounds per session
+    this.guessTime = options.guessTime || 30; // Time limit per guess in seconds
     this.startTime = null;
     this.endTime = null;
     this.roundResults = [];
     this.sessionLeaderboard = [];
-    this.maxPlayers = 8;
+    this.maxPlayers = options.maxPlayers || 8;
     this.minPlayers = 2;
     this.dennerRotation = []; // Track denner rotation
   }
@@ -130,6 +131,8 @@ class GameRoom {
     this.endTime = null;
     this.currentRound++;
 
+    this.targetColor = generateRandomColor();
+
     // Reset round scores
     this.players.forEach((player) => {
       player.score = 0;
@@ -213,6 +216,7 @@ class GameRoom {
       gameType: this.gameType,
       currentRound: this.currentRound,
       maxRounds: this.maxRounds,
+      guessTime: this.guessTime,
       startTime: this.startTime,
       endTime: this.endTime,
       playerCount: this.players.size,
@@ -283,9 +287,9 @@ io.on("connection", (socket) => {
   });
 
   // Create a new game room
-  socket.on("createRoom", ({ playerName, targetColor }) => {
+  socket.on("createRoom", ({ playerName, targetColor, options = {} }) => {
     const roomId = generateRoomId();
-    const game = new GameRoom(roomId, socket.id, targetColor);
+    const game = new GameRoom(roomId, socket.id, targetColor, options);
 
     game.addPlayer(socket.id, playerName);
     activeGames.set(roomId, game);
@@ -298,7 +302,10 @@ io.on("connection", (socket) => {
       gameInfo: game.getGameInfo(),
     });
 
-    console.log(`Room ${roomId} created by ${playerName}`);
+    console.log(
+      `Room ${roomId} created by ${playerName} with options:`,
+      options,
+    );
   });
 
   // Select game type (denner only)
@@ -475,6 +482,33 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Extend game time (denner only)
+  socket.on("extendTime", ({ roomId, additionalSeconds }) => {
+    const game = activeGames.get(roomId);
+
+    if (!game || game.hostId !== socket.id) {
+      socket.emit("error", { message: "Only the denner can extend time" });
+      return;
+    }
+
+    if (game.gameState !== "playing") {
+      socket.emit("error", {
+        message: "Can only extend time during active game",
+      });
+      return;
+    }
+
+    // Notify all players of time extension
+    io.to(roomId).emit("timeExtended", {
+      additionalSeconds: additionalSeconds || 30,
+      gameInfo: game.getGameInfo(),
+    });
+
+    console.log(
+      `Time extended by ${additionalSeconds || 30} seconds in room ${roomId}`,
+    );
+  });
+
   // Set custom target color (host only)
   socket.on("setTargetColor", ({ roomId, targetColor }) => {
     const game = activeGames.get(roomId);
@@ -521,13 +555,32 @@ io.on("connection", (socket) => {
     const game = activeGames.get(roomId);
 
     if (game) {
+      const wasHost = game.hostId === socket.id;
       const shouldCloseRoom = game.removePlayer(socket.id);
 
       if (shouldCloseRoom) {
         activeGames.delete(roomId);
         console.log(`Room ${roomId} closed (no players left)`);
       } else {
-        // Notify remaining players
+        // Check if denner changed and notify players
+        if (wasHost && game.players.size > 0) {
+          const newDenner = game.hostId;
+          const newDennerName = game.players.get(newDenner)?.name || "Unknown";
+
+          console.log(
+            `Denner changed in room ${roomId}: ${socket.id} -> ${newDenner}`,
+          );
+
+          // Notify remaining players of denner change
+          io.to(roomId).emit("dennerChanged", {
+            newDenner: newDenner,
+            dennerName: newDennerName,
+            gameInfo: game.getGameInfo(),
+            reason: "hostLeft",
+          });
+        }
+
+        // Notify remaining players of player leaving
         io.to(roomId).emit("playerLeft", {
           playerId: socket.id,
           gameInfo: game.getGameInfo(),
@@ -551,13 +604,33 @@ io.on("connection", (socket) => {
       const game = activeGames.get(roomId);
 
       if (game) {
+        const wasHost = game.hostId === socket.id;
         const shouldCloseRoom = game.removePlayer(socket.id);
 
         if (shouldCloseRoom) {
           activeGames.delete(roomId);
           console.log(`Room ${roomId} closed (no players left)`);
         } else {
-          // Notify remaining players
+          // Check if denner changed and notify players
+          if (wasHost && game.players.size > 0) {
+            const newDenner = game.hostId;
+            const newDennerName =
+              game.players.get(newDenner)?.name || "Unknown";
+
+            console.log(
+              `Denner changed in room ${roomId}: ${socket.id} -> ${newDenner}`,
+            );
+
+            // Notify remaining players of denner change
+            io.to(roomId).emit("dennerChanged", {
+              newDenner: newDenner,
+              dennerName: newDennerName,
+              gameInfo: game.getGameInfo(),
+              reason: "hostDisconnected",
+            });
+          }
+
+          // Notify remaining players of player leaving
           io.to(roomId).emit("playerLeft", {
             playerId: socket.id,
             gameInfo: game.getGameInfo(),
@@ -580,6 +653,19 @@ function generateRoomId() {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+// Utility function to generate random target colors
+function generateRandomColor() {
+  // Generate a random RGB color
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+
+  // Convert to hex format
+  const hex = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+
+  return hex;
 }
 
 // API endpoints

@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FindColorGame } from "@/components/FindColorGame";
 import { ColorMixingGame } from "@/components/ColorMixingGame";
-import { GameProvider, useGameContext } from "@/lib/GameContext";
+import { useGameContext } from "@/lib/GameContext";
 import { useColorGame } from "@/lib/useColorGame";
 import { useGameResults } from "@/lib/GameResultsContext";
 import { cn } from "@/lib/utils";
 
-function GamePageContent() {
+export default function GamePageContent() {
   const router = useRouter();
   const gameContext = useGameContext();
   const {
@@ -203,13 +203,5 @@ function GamePageContent() {
         />
       )}
     </div>
-  );
-}
-
-export default function GamePage() {
-  return (
-    <GameProvider>
-      <GamePageContent />
-    </GameProvider>
   );
 }
