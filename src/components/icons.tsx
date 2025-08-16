@@ -30,9 +30,9 @@ export const Fire = ({ className = "w-8 h-12" }: { className?: string }) => {
 export const Brush = () => {
   return (
     <svg
-      width="98"
-      height="325"
-      viewBox="0 0 98 325"
+      width="60"
+      height="220"
+      viewBox="0 0 100 325"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >

@@ -6,7 +6,11 @@ import { useGameContextRequired } from "@/lib/GameContext";
 import { cn } from "@/lib/utils";
 interface FindColorGameProps {
   targetColor?: string | null;
-  onScoreSubmit: (score: number, timeTaken: number) => void;
+  onScoreSubmit: (
+    score: number,
+    timeTaken: number,
+    actualTargetColor?: string,
+  ) => void;
   isMultiplayer?: boolean;
   className?: string;
 }
@@ -46,7 +50,7 @@ export const FindColorGame = ({
       {/* Target Color Display */}
       <div className="flex flex-col items-center gap-4">
         <div
-          className="w-[373px] h-[88px] border border-black rounded-[12px] flex items-center justify-center"
+          className="w-full h-[88px] border border-black rounded-[12px] flex items-center justify-center"
           style={{
             backgroundColor: targetColor || "#f0f0f0",
             boxShadow: "0px 6px 0px 0px rgba(0, 0, 0, 1)",
@@ -70,7 +74,7 @@ export const FindColorGame = ({
       {gameStage === "initial" && (
         <div className="flex flex-col items-center gap-4">
           <div
-            className="w-[373px] h-[360px] bg-[#FFFFFF] border border-black rounded-[9px] flex flex-col items-center justify-center gap-4 cursor-pointer"
+            className="w-full h-[360px] bg-[#FFFFFF] border border-black rounded-[9px] flex flex-col items-center justify-center gap-4 cursor-pointer"
             style={{ boxShadow: "0px 1.5px 0px 0px rgba(0, 0, 0, 1)" }}
             onClick={openCamera}
           >
@@ -86,7 +90,7 @@ export const FindColorGame = ({
 
           <div
             className={cn(
-              "w-[373px] h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
+              "w-full h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
               "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed",
             )}
             style={{
@@ -102,7 +106,7 @@ export const FindColorGame = ({
       {/* Game Stage - Camera */}
       {gameStage === "camera" && (
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-[373px] h-[360px] border border-black rounded-[9px] overflow-hidden">
+          <div className="relative w-full h-[360px] border border-black rounded-[9px] overflow-hidden">
             {cameraError ? (
               <div className="w-full h-full bg-red-100 border border-red-300 rounded flex items-center justify-center p-4">
                 <p className="text-red-600 text-sm text-center">
@@ -136,7 +140,7 @@ export const FindColorGame = ({
 
           <div
             className={cn(
-              "w-[373px] h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
+              "w-full h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
               {
                 "bg-[#FFE254] text-black cursor-pointer":
                   webcamReady && !isLoading,
@@ -158,7 +162,7 @@ export const FindColorGame = ({
       {/* Game Stage - Captured */}
       {gameStage === "captured" && capturedImage && (
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-[373px] h-[360px] border border-black rounded-[9px] overflow-hidden">
+          <div className="relative w-full h-[360px] border border-black rounded-[9px] overflow-hidden">
             <Image
               src={capturedImage}
               alt="Captured"
@@ -181,14 +185,16 @@ export const FindColorGame = ({
           </div>
 
           <div
-            className="w-[373px] h-[51px] bg-[#FFE254] border border-black rounded-[39px] flex items-center justify-center cursor-pointer font-hartone text-[30px] font-normal text-black"
+            className="w-full h-[51px] bg-[#FFE254] border border-black rounded-[39px] flex items-center justify-center cursor-pointer font-hartone text-[30px] font-normal text-black"
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
               letterSpacing: "7.5%",
             }}
             onClick={() => {
               console.log("Submitting result...");
-              submitResult(onScoreSubmit);
+              submitResult((score: number, timeTaken: number) => {
+                onScoreSubmit(score, timeTaken, targetColor || undefined);
+              });
             }}
           >
             SUBMIT

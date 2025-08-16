@@ -4,8 +4,8 @@ import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
-  title: "COLOR HUNTER - BRUTALIST EDITION",
-  description: "BRUTAL COLOR PERCEPTION TRAINING SYSTEM - NO BULLSHIT",
+  title: "COLOR HUNTER",
+  description: "Find the color, win the game!",
 };
 
 export default function RootLayout({
@@ -15,10 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="font-mono bg-background text-foreground h-full w-screen flex flex-col items-center justify-center">
+      <body className="font-mono bg-background text-foreground flex flex-col items-center justify-center">
         <Providers>
           <div
-            className="min-h-screen px-8 font-sintony w-full flex flex-col items-center gap-8"
+            className="min-h-screen px-8 font-sintony w-screen flex flex-col items-center gap-8"
             style={{ backgroundColor: "#FFFFE7" }}
           >
             <Header />

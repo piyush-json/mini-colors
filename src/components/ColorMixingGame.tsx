@@ -7,7 +7,12 @@ import { useGameContext } from "@/lib/GameContext";
 
 interface ColorMixingGameProps {
   targetColor?: string | null;
-  onScoreSubmit?: (score: number, timeTaken: number) => void;
+  onScoreSubmit?: (
+    score: number,
+    timeTaken: number,
+    actualTargetColor?: string,
+    actualCapturedColor?: string,
+  ) => void;
   isMultiplayer?: boolean;
   disabled?: boolean;
 }
@@ -84,14 +89,21 @@ export const ColorMixingGame = ({
     handleShadingChange,
     handleMix,
     getColorHex,
+    initializeGame,
   } = useColorMixingGame({
     isMultiplayer,
-    targetColor: targetColor || "#A6C598",
     onScoreSubmit,
   });
 
   // Get game context to sync timer
   const gameContext = useGameContext();
+
+  // Initialize game when targetColor changes (similar to FindColorGame)
+  useEffect(() => {
+    if (targetColor) {
+      initializeGame(targetColor, isMultiplayer);
+    }
+  }, [targetColor, isMultiplayer, initializeGame]);
 
   // Sync the timer with the game context so header can display it
   useEffect(() => {
@@ -101,26 +113,65 @@ export const ColorMixingGame = ({
     }
   }, [state.timer, gameContext]);
 
-  // Don't render if no challenge loaded
-  if (!state.currentChallenge) {
+  // Don't render if no target color (loading state)
+  if (!targetColor) {
     return (
-      <div className="flex flex-col items-center gap-4 w-full max-w-[378px] mx-auto">
-        <div className="text-center">
-          <div className="font-hartone text-xl uppercase tracking-wide mb-4">
-            Loading challenge...
+      <div className="flex flex-col items-center gap-[55px] w-full  mx-auto">
+        {/* Target Color Display with Loading */}
+        <div className="flex flex-col items-center gap-[17px] w-full">
+          <div className="relative w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center bg-[#f0f0f0]">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+              <span className="font-sintony text-sm text-black">
+                Loading...
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-between items-center w-[287px]">
+            <div className="px-1">
+              <div className="text-[14px] font-sintony font-bold leading-[16px] tracking-[-1%] text-black">
+                Target colour
+              </div>
+            </div>
+            <div className="text-[14px] font-sintony font-bold leading-[16px] tracking-[-1%] text-black">
+              Your colour
+            </div>
           </div>
         </div>
+
+        {/* Disabled sliders during loading */}
+        <div className="flex flex-col gap-[24px] w-full opacity-50">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center w-full gap-[30px]">
+              <div className="relative w-[318px] h-[48px]">
+                <div className="absolute top-[5px] w-[318px] h-[38px] bg-gray-200 border border-black rounded-[21px]" />
+                <div className="absolute top-0 w-[48px] h-[48px] rounded-full border-[4px] border-black bg-gray-300" />
+              </div>
+              <div className="text-[22px] font-hartone leading-[16px] tracking-[7.5%] text-black text-right min-w-[40px]">
+                0%
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Disabled submit button */}
+        <button
+          disabled
+          className="w-full h-[51px] bg-gray-300 border border-black rounded-[39px] shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] text-[30px] font-hartone leading-[33px] tracking-[7.5%] text-gray-500 flex items-center justify-center opacity-50 cursor-not-allowed"
+        >
+          SUBMIT
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-[55px] w-full max-w-[378px] mx-auto">
+    <div className="flex flex-col items-center gap-12 w-full  mx-auto">
       {/* Target and Your Color Display */}
       <div className="flex flex-col items-center gap-[17px] w-full">
         {/* Color Display */}
         <div
-          className="relative w-full h-[88px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
+          className="relative w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
           style={{ backgroundColor: targetColorHex }}
         >
           {!targetColor && (
@@ -156,7 +207,7 @@ export const ColorMixingGame = ({
       </div>
 
       {/* Color Sliders */}
-      <div className="flex flex-col gap-[24px] w-full">
+      <div className="flex flex-col gap-3 w-full">
         {/* Primary Color 1 */}
         <ColorSlider
           value={state.colorPercentages.color1.percentage}
@@ -219,7 +270,12 @@ export const ColorMixingGame = ({
             const timeTaken = state.startTime
               ? Math.floor((Date.now() - state.startTime) / 1000)
               : 0;
-            onScoreSubmit(attempt.matchPercentage, timeTaken);
+            onScoreSubmit(
+              attempt.matchPercentage,
+              timeTaken,
+              targetColorHex || targetColor || undefined,
+              mixedColorHex,
+            );
           }
         }}
         disabled={disabled || state.showResults}

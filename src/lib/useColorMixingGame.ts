@@ -59,18 +59,34 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     };
   }, [state.isPlaying, sdk]);
 
-  // Initialize challenge only once
-  useEffect(() => {
-    if (initializedRef.current) return;
+  // Initialize challenge only when explicitly called
+  const initializeGame = useCallback(
+    (targetColor?: string, isMultiplayer?: boolean) => {
+      initializedRef.current = false; // Reset initialization flag
 
-    if (isMultiplayer && targetColor) {
-      sdk.loadChallenge(targetColor);
-      initializedRef.current = true;
-    } else if (!isMultiplayer) {
-      sdk.startChallenge();
-      initializedRef.current = true;
-    }
-  }, [isMultiplayer, targetColor, sdk]);
+      if (isMultiplayer && targetColor) {
+        sdk.loadChallenge(targetColor);
+        initializedRef.current = true;
+      } else if (!isMultiplayer) {
+        sdk.startChallenge();
+        initializedRef.current = true;
+      }
+    },
+    [sdk],
+  );
+
+  // Remove auto-initialization - only initialize when explicitly called
+  // useEffect(() => {
+  //   if (initializedRef.current) return;
+
+  //   if (isMultiplayer && targetColor) {
+  //     sdk.loadChallenge(targetColor);
+  //     initializedRef.current = true;
+  //   } else if (!isMultiplayer) {
+  //     sdk.startChallenge();
+  //     initializedRef.current = true;
+  //   }
+  // }, [isMultiplayer, targetColor, sdk]);
 
   // Auto-submit in multiplayer mode when results are shown
   useEffect(() => {
@@ -196,6 +212,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     handleReset,
     handleNewChallenge,
     toggleHelp,
+    initializeGame,
 
     // Utilities
     getColorHex,

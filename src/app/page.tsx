@@ -19,10 +19,20 @@ const Title = () => {
 };
 
 export default function HomePage() {
+  // Calculate next GMT midnight
+  const now = new Date();
+  const nextRefresh = new Date();
+  nextRefresh.setUTCDate(nextRefresh.getUTCDate() + 1);
+  nextRefresh.setUTCHours(0, 0, 0, 0);
+
+  const diff = nextRefresh.getTime() - now.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const refreshTime = `${hours.toString().padStart(2, "0")}h:${minutes.toString().padStart(2, "0")}m`;
   return (
     <>
       <Title />
-      <div className="flex flex-col items-center w-full grow justify-center relative">
+      <div className="flex flex-col items-center w-full grow justify-center relative ">
         <div className="translate-y-[50%] bg-[#F6881D] border border-black rounded-[4px] pl-5 pr-3 py-2 flex items-center gap-2 relative z-10">
           <div className="absolute -bottom-1 -left-4 ">
             <Fire />
@@ -32,7 +42,7 @@ export default function HomePage() {
           </span>
         </div>
         <div
-          className="w-full h-[320px] border border-black rounded-[30px]  relative"
+          className="w-[220px] h-[220px] border border-black rounded-[30px]  relative"
           style={{
             backgroundColor: "#A6C598",
             boxShadow: "0px 1.5px 0px 0px rgba(0, 0, 0, 1)",
@@ -43,7 +53,7 @@ export default function HomePage() {
           </div>
         </div>
         <p className="text-[14px] leading-4 text-black font-normal font-sintony pt-5">
-          the colour refreshes in 12h:03m:44s
+          the colour refreshes in {refreshTime}
         </p>
       </div>
 

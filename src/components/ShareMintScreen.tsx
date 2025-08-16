@@ -7,7 +7,9 @@ interface ShareMintScreenProps {
   targetColor: string;
   capturedColor: string;
   similarity: number;
+  timeTaken: number;
   mode: "daily" | "practice";
+  gameType: "upload" | "mixing";
   onShare: () => void;
   onMint: () => void;
   onContinue: () => void;
@@ -19,7 +21,9 @@ export const ShareMintScreen = ({
   targetColor,
   capturedColor,
   similarity,
+  timeTaken,
   mode,
+  gameType,
   onShare,
   onMint,
   onContinue,
