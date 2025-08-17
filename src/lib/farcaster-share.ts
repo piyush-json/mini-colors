@@ -48,7 +48,7 @@ export function generateFarcasterShareUrl(data: ShareData): string {
 
   const encoded = encodeShareData(data);
 
-  const shareUrl = `${baseUrl}/?d=${encoded}`;
+  const shareUrl = `${baseUrl}/share?d=${encoded}`;
 
   return shareUrl;
 }

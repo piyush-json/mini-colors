@@ -20,6 +20,19 @@ export function useMiniKitUser() {
   const getUserAvatar = () => {
     return context?.user?.pfpUrl || "";
   };
+
+  const getSafeAreaHeight = () => {
+    const safeAreaInsets = context?.client.safeAreaInsets;
+    if (safeAreaInsets) {
+      const availableHeight =
+        window.innerHeight -
+        (safeAreaInsets.top || 0) -
+        (safeAreaInsets.bottom || 0);
+      return availableHeight > 0 ? `${availableHeight}px` : "100vh";
+    }
+    return "100vh";
+  };
+
   const isLoading = isFrameReady;
 
   return {
@@ -29,5 +42,6 @@ export function useMiniKitUser() {
     getUserName,
     getUserAddress,
     getUserAvatar,
+    getSafeAreaHeight,
   };
 }

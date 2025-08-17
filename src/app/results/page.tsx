@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShareMintScreen } from "@/components/ShareMintScreen";
 import { useGameResults } from "@/lib/GameResultsContext";
-import { useComposeCast } from "@coinbase/onchainkit/minikit";
+import { useComposeCast, useMiniKit } from "@coinbase/onchainkit/minikit";
 import html2canvas from "html2canvas";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
-import { getMintCost } from "@/lib/nft-contract";
+import { getMintCost, useMintNFT } from "@/lib/nft-contract";
 import { generateFarcasterShareUrl } from "@/lib/farcaster-share";
 // import { useFrame } from "@/lib/FrameContext";
 
@@ -15,8 +15,8 @@ export default function ResultsPage() {
   const router = useRouter();
   const { results, clearResults, setGameMode } = useGameResults();
   const { composeCastAsync: composeCast } = useComposeCast();
-  const { getUserAddress, getUserName } = useMiniKitUser();
-  const [isMinting, setIsMinting] = useState(false);
+  const { getUserName } = useMiniKitUser();
+  const { mint, isPending: isMinting, address } = useMintNFT();
 
   useEffect(() => {
     if (!results) {
@@ -51,29 +51,19 @@ export default function ResultsPage() {
       const shareUrl = generateFarcasterShareUrl(shareData);
       console.log("Share URL:", shareUrl);
       await composeCast({
-        text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score? #ColorGame #OnchainKit`,
+        text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score?`,
         embeds: [shareUrl],
       });
     } catch (error) {
       console.error("Error taking screenshot:", error);
       await composeCast({
-        text: `Just scored ${results?.similarity}% in the color matching game! 🎨 Can you beat my score? #ColorGame #OnchainKit`,
+        text: `Just scored ${results?.similarity}% in the color matching game! 🎨 Can you beat my score?`,
       });
     }
   };
   const handleMint = async () => {
     try {
-      setIsMinting(true);
       console.log("Mint button clicked");
-
-      const userAddress = getUserAddress();
-      if (
-        !userAddress ||
-        userAddress === "0x0000000000000000000000000000000000000000"
-      ) {
-        alert("Please connect your wallet to mint NFT");
-        return;
-      }
 
       // Find the mintit div specifically
       const mintitElement = document.getElementById("mintit");
@@ -98,6 +88,7 @@ export default function ResultsPage() {
         targetColor: results.targetColor,
         capturedColor: results.capturedColor,
         similarity: results.similarity,
+        timeTaken: results.timeTaken,
         date: new Date().toISOString().split("T")[0], // YYYY-MM-DD format
         mode: results.gameType === "upload" ? "finding" : "color-mixing", // Map gameType to mode
         image: base64Image,
@@ -131,40 +122,11 @@ export default function ResultsPage() {
       console.log("NFT Metadata URI:", metadataUri);
       console.log("Image URL:", imageUrl);
 
-      // Prepare NFT minting parameters
-      const mintParams = {
-        to: userAddress,
-        tokenURI: metadataUri,
-        similarity: results.similarity,
-        targetColor: results.targetColor,
-        capturedColor: results.capturedColor,
-        gameMode: results.gameType === "upload" ? "finding" : "color-mixing",
-      };
-
-      // Get mint cost
-      const mintCost = getMintCost();
-      console.log("Mint cost:", mintCost.toString(), "wei");
-
-      // For demonstration, show the mint details
-      const mintCostEth = Number(mintCost) / 1e18;
-      alert(
-        `NFT Ready to Mint!\n\n` +
-          `Metadata URI: ${metadataUri}\n` +
-          `Mint Cost: ${mintCostEth} ETH\n` +
-          `Target Color: ${results.targetColor}\n` +
-          `Your Color: ${results.capturedColor}\n` +
-          `Similarity: ${results.similarity}%\n\n` +
-          `In a real implementation, this would trigger an NFT mint transaction.`,
-      );
-
-      // TODO: Implement actual NFT minting logic here
-      // const txHash = await mintColorGameNFT(mintParams);
-      // console.log("NFT minted! Transaction hash:", txHash);
+      // Mint NFT
+      await mint(metadataUri, getMintCost());
     } catch (error) {
       console.error("Error minting NFT:", error);
       alert("Failed to mint NFT. Please try again.");
-    } finally {
-      setIsMinting(false);
     }
   };
 
