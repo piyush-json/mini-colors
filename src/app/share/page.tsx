@@ -26,7 +26,7 @@ export async function generateMetadata({
   }
 
   // Create OG image URL with the same encoded parameter
-  const ogImageUrl = `${process.env.NEXT_PUBLIC_FURL || "http://localhost:3000"}/api/og?d=${resolvedSearchParams.d}`;
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/api/og?d=${resolvedSearchParams.d}`;
   const shareUrl = `${process.env.NEXT_PUBLIC_FURL || "http://localhost:3000"}/share?d=${resolvedSearchParams.d}`;
 
   return {

@@ -43,12 +43,12 @@ function decodeShareData(encoded: string): ShareData | null {
 
 export function generateFarcasterShareUrl(data: ShareData): string {
   const baseUrl =
-    process.env.NEXT_PUBLIC_FURL ||
+    process.env.NEXT_PUBLIC_URL ||
     (typeof window !== "undefined" ? window.location.origin : "");
 
   const encoded = encodeShareData(data);
 
-  const shareUrl = `${baseUrl}/share?d=${encoded}`;
+  const shareUrl = `${baseUrl}/?d=${encoded}`;
 
   return shareUrl;
 }

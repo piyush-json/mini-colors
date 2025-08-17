@@ -102,7 +102,7 @@ export const MintCard = ({
         </div>
 
         {/* Arrow */}
-        <div className="absolute left-10 top-[40%] z-10">
+        <div className="absolute left-8 top-[40%] z-10">
           <ArrowLeft />
         </div>
         <div className="absolute right-14 top-[50%] z-10">
