@@ -138,6 +138,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
             timeScore: 0,
             finalScore: attempt.matchPercentage,
             date: new Date().toISOString().split("T")[0],
+            gameType: "color-mixing", // Add gameType field for mixing game
           }),
         });
       } catch (error) {

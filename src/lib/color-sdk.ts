@@ -1,5 +1,9 @@
 import { differenceCiede2000, converter, formatHex, formatRgb } from "culori";
 import { getDailyColorFromDate } from "./utils";
+import {
+  calculateDeltaE,
+  calculatePercentageMatch,
+} from "./color-mixing-utils";
 
 const lab = converter("lab");
 
@@ -7,7 +11,6 @@ export interface ColorMatch {
   targetColor: string;
   capturedColor: string;
   similarity: number;
-  timeScore: number;
   finalScore: number;
   timeTaken: number;
 }
@@ -74,40 +77,26 @@ export class ColorSDK {
   }
 
   /**
-   * Calculate color similarity using CIEDE2000 (more accurate than Euclidean distance)
-   *
-   * CIEDE2000 differences:
-   * - 0-1: Imperceptible (identical colors)
-   * - 1-2: Just noticeable difference
-   * - 2-10: Small difference
-   * - 10-50: Medium difference
-   * - 50+: Large difference
-   *
-   * Returns: Raw CIEDE2000 difference (not normalized to 0-100)
-   * Lower values = more similar colors
+   * Calculate color similarity using DeltaE (same as mix SDK)
    */
   static calculateColorSimilarity(color1: string, color2: string): number {
     try {
-      const lab1 = lab(color1);
-      const lab2 = lab(color2);
+      // Convert colors to RGB
+      const rgb1 = this.parseColor(color1);
+      const rgb2 = this.parseColor(color2);
 
-      if (!lab1 || !lab2) {
-        console.log("LAB conversion failed, falling back to RGB");
+      if (!rgb1 || !rgb2) {
+        console.log("Color parsing failed, using fallback");
         return this.calculateRgbDistance(color1, color2);
       }
 
-      const diffFn = differenceCiede2000();
-      const diff = diffFn(lab1, lab2);
+      // Use the same DeltaE calculation as mix SDK
+      const deltaE = calculateDeltaE(rgb1, rgb2);
+      console.log("DeltaE difference:", deltaE);
 
-      console.log("CIEDE2000 difference:", diff);
-      console.log(
-        "RGB fallback difference:",
-        this.calculateRgbDistance(color1, color2),
-      );
-
-      return diff;
+      return deltaE;
     } catch (error) {
-      console.log("Error in CIEDE2000 calculation:", error);
+      console.log("Error in DeltaE calculation:", error);
       // Fallback to RGB distance
       return this.calculateRgbDistance(color1, color2);
     }
@@ -149,7 +138,30 @@ export class ColorSDK {
   }
 
   /**
-   * Calculate game score based on color similarity and time
+   * Parse color string (hex or RGB) to RGB object
+   */
+  private static parseColor(
+    color: string,
+  ): { r: number; g: number; b: number } | null {
+    if (color.startsWith("#")) {
+      // Hex color
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+      if (result) {
+        return {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        };
+      }
+    } else if (color.startsWith("rgb")) {
+      // RGB color
+      return this.parseRgb(color);
+    }
+    return null;
+  }
+
+  /**
+   * Calculate game score based on color similarity only (no time factor)
    */
   static calculateScore(
     targetColor: string,
@@ -158,70 +170,20 @@ export class ColorSDK {
     endTime: number,
   ): ColorMatch {
     const timeTaken = (endTime - startTime) / 1000; // in seconds
-    const ciedeDifference = this.calculateColorSimilarity(
-      targetColor,
-      capturedColor,
-    );
+    const deltaE = this.calculateColorSimilarity(targetColor, capturedColor);
 
-    let normalizedDifference: number;
+    const matchPercentage = calculatePercentageMatch(deltaE);
 
-    if (ciedeDifference <= 1) {
-      normalizedDifference = ciedeDifference * 10;
-    } else if (ciedeDifference <= 5) {
-      normalizedDifference = 10 + Math.sqrt(ciedeDifference - 1) * 15;
-    } else if (ciedeDifference <= 15) {
-      normalizedDifference = 40 + (ciedeDifference - 5) * 3;
-    } else if (ciedeDifference <= 30) {
-      normalizedDifference = 70 + Math.log(ciedeDifference - 14) * 10;
-    } else {
-      normalizedDifference = Math.min(
-        100,
-        90 + Math.log(ciedeDifference - 29) * 5,
-      );
-    }
-
-    console.log("normalizedDifference", normalizedDifference);
-
-    const maxSimilarity = 100;
-    const similarityScore = Math.max(0, maxSimilarity - normalizedDifference);
-
-    const maxTime = 30;
-    const timeScore = Math.max(0, maxTime - timeTaken);
-
-    const finalScore = Math.round(similarityScore * 0.7 + timeScore * 0.3);
+    // Score is purely based on color similarity, no time factor
+    const finalScore = matchPercentage;
 
     return {
       targetColor,
       capturedColor,
-      similarity: Math.round(normalizedDifference),
-      timeScore: Math.round(timeScore),
-      finalScore,
+      similarity: Math.round(matchPercentage),
+      finalScore: Math.round(finalScore),
       timeTaken: Math.round(timeTaken * 100) / 100,
     };
-  }
-
-  /**
-   * Get color name suggestions based on hex value
-   */
-  static getColorName(hex: string): string | null {
-    const colorNames: { [key: string]: string } = {
-      "#ff0000": "Red",
-      "#00ff00": "Green",
-      "#0000ff": "Blue",
-      "#ffff00": "Yellow",
-      "#ff00ff": "Magenta",
-      "#00ffff": "Cyan",
-      "#ff8000": "Orange",
-      "#8000ff": "Purple",
-      "#ff0080": "Pink",
-      "#80ff00": "Lime",
-      "#0080ff": "Sky Blue",
-      "#800080": "Purple",
-      "#008080": "Teal",
-      "#808000": "Olive",
-    };
-
-    return colorNames[hex.toLowerCase()] || null;
   }
 
   /**

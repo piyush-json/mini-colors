@@ -77,12 +77,18 @@ export default function GamePageContent() {
 
     let capturedColor: string;
     if (gameType === "upload") {
-      const contextCapturedColor = gameContext?.capturedColor;
-      if (!contextCapturedColor) {
-        console.error("No captured color available for upload game");
-        return;
+      // For upload (FindColorGame), use the actualCapturedColor passed from the game
+      if (actualCapturedColor) {
+        capturedColor = actualCapturedColor;
+      } else {
+        // Fallback to context if not provided (for backward compatibility)
+        const contextCapturedColor = gameContext?.capturedColor;
+        if (!contextCapturedColor) {
+          console.error("No captured color available for upload game");
+          return;
+        }
+        capturedColor = contextCapturedColor;
       }
-      capturedColor = contextCapturedColor;
     } else {
       if (!actualCapturedColor) {
         console.error("No mixed color provided for mixing game");
@@ -162,6 +168,7 @@ export default function GamePageContent() {
           key={`find-${currentMode}-${getTargetColor()}`}
           targetColor={getTargetColor()}
           onScoreSubmit={handleScoreSubmit}
+          mode={currentMode}
         />
       ) : (
         <ColorMixingGame

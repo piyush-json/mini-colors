@@ -20,25 +20,25 @@ const Child = ({ children }: { children: ReactNode }) => {
 
 export function Providers(props: { children: ReactNode }) {
   return (
-    <GameResultsProvider>
-      <GameProvider>
-        <SocketProvider>
-          <MiniKitProvider
-            apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-            chain={base}
-            config={{
-              appearance: {
-                mode: "auto",
-                theme: "mini-app-theme",
-                name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
-                logo: process.env.NEXT_PUBLIC_ICON_URL,
-              },
-            }}
-          >
+    <MiniKitProvider
+      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+      chain={base}
+      config={{
+        appearance: {
+          mode: "auto",
+          theme: "mini-app-theme",
+          name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
+          logo: process.env.NEXT_PUBLIC_ICON_URL,
+        },
+      }}
+    >
+      <GameResultsProvider>
+        <GameProvider>
+          <SocketProvider>
             <Child>{props.children}</Child>
-          </MiniKitProvider>
-        </SocketProvider>
-      </GameProvider>
-    </GameResultsProvider>
+          </SocketProvider>
+        </GameProvider>
+      </GameResultsProvider>
+    </MiniKitProvider>
   );
 }

@@ -1,0 +1,24 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEwNzU4OTksInR5cGUiOiJhdXRoIiwia2V5IjoiMHgxZDVDZDhGRWM5RDZjY2RmZmM1N0JlNzZBZGRGM2UzNzEyQ0NEM0QyIn0",
+    "payload": "eyJkb21haW4iOiJwbGF5c2hhZGUuZnVuIn0",
+    "signature": "Pp2jvZ6oID6yTDZh0Q9s2RKhYxxgsXq1G3Pf3ofu4XZ6moGdEIkFMnGqMuZiN6gKl36X+OTQYb0RSzYCuNh5Dhw="
+  },
+  "frame": {
+    "version": "1",
+    "name": "Play Shade",
+    "subtitle": "Find and match colors",
+    "description": "Find colours and compete with your friends.",
+    "iconUrl": "https://playshade.fun/icon.png",
+    "splashImageUrl": "https://playshade.fun/splash.png",
+    "splashBackgroundColor": "#ffffe9",
+    "homeUrl": "https://playshade.fun",
+    "webhookUrl": "https://playshade.fun/api/webhook",
+    "primaryCategory": "games",
+    "heroImageUrl": "https://playshade.fun/hero.png",
+    "tagline": "Find and match colors",
+    "ogTitle": "Play Shade",
+    "ogDescription": "Find colours and compete with your friends.",
+    "ogImageUrl": "https://playshade.fun/hero.png"
+  }
+}

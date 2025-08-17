@@ -16,6 +16,7 @@ interface GameHistory {
   score: number;
   timeTaken: number;
   targetColor: string;
+  capturedColor: string;
   similarity: number;
   date: string;
   gameMode: string;
@@ -33,6 +34,8 @@ export const GameHistoryScreen = () => {
   const [stats, setStats] = useState<HistoryStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const userId = getUserId();
+  const userName = getUserName();
 
   // Fetch game history and stats
   useEffect(() => {
@@ -41,7 +44,6 @@ export const GameHistoryScreen = () => {
     const fetchHistory = async () => {
       setIsLoading(true);
       try {
-        const userId = getUserId();
         const response = await fetch(
           `/api/game/history?userId=${encodeURIComponent(userId)}`,
         );
@@ -73,7 +75,7 @@ export const GameHistoryScreen = () => {
     };
 
     fetchHistory();
-  }, [getUserId, userLoading]);
+  }, [userId, userLoading]);
 
   const handleBackToMenu = () => {
     window.location.href = "/";
@@ -85,13 +87,15 @@ export const GameHistoryScreen = () => {
 
   if (userLoading || isLoading) {
     return (
-      <div className="w-full flex-1 flex items-center justify-center px-8 py-4">
+      <div className="w-full mx-auto flex items-center justify-center py-8">
         <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <h2 className="font-black text-2xl uppercase tracking-tighter mb-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
+          <h2 className="font-hartone text-xl uppercase tracking-wide mb-2 text-black">
             LOADING HISTORY
           </h2>
-          <p className="text-gray-600">Fetching your game data...</p>
+          <p className="text-sm text-gray-600 tracking-wider font-sintony">
+            Fetching your game data...
+          </p>
         </div>
       </div>
     );
@@ -119,40 +123,37 @@ export const GameHistoryScreen = () => {
   }
 
   return (
-    <div className="w-full flex flex-col items-center gap-4 grow pb-6">
+    <div className="w-full flex flex-col gap-6 grow">
       {/* Header */}
-      <div className="text-center flex flex-col">
-        <h1 className="font-hartone text-4xl uppercase tracking-wide font-light text-black">
+      <div className="text-center flex flex-col gap-2">
+        <h1 className="font-hartone text-[39px] uppercase tracking-wide font-normal text-black leading-[42px]">
           HISTORY
         </h1>
-        <p className="text-sm text-gray-600 tracking-wider font-sintony">
-          Your recent game performance
+        <p className="text-sm text-black tracking-[7.5%] font-sintony">
+          Check all your past submissions here
         </p>
       </div>
 
-      {/* Light Stats */}
+      {/* Stats Section */}
       {stats && (
-        <div className="w-full rounded-lg p-4 border border-black bg-gray-50">
+        <div className="w-full border border-black rounded-[5px] bg-white p-2 shadow-[0px_1.5px_0px_0px_rgba(0,0,0,1)]">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="flex flex-col items-center">
-              <Gamepad2 className="w-5 h-5 text-blue-600 mb-1" />
-              <div className="font-bold text-lg text-black font-sintony">
+              <p className="font-bold text-lg text-black font-sintony">
                 {stats.totalGames}
-              </div>
+              </p>
               <div className="text-xs text-gray-600">Total Games</div>
             </div>
             <div className="flex flex-col items-center">
-              <Trophy className="w-5 h-5 text-yellow-600 mb-1" />
-              <div className="font-bold text-lg text-black font-sintony">
+              <p className="font-bold text-lg text-black font-sintony">
                 {stats.bestScore}%
-              </div>
+              </p>
               <div className="text-xs text-gray-600">Best Score</div>
             </div>
             <div className="flex flex-col items-center">
-              <Target className="w-5 h-5 text-green-600 mb-1" />
-              <div className="font-bold text-lg text-black font-sintony">
+              <p className="font-bold text-lg text-black font-sintony">
                 {stats.averageScore.toFixed(0)}%
-              </div>
+              </p>
               <div className="text-xs text-gray-600">Average Score</div>
             </div>
           </div>
@@ -163,68 +164,72 @@ export const GameHistoryScreen = () => {
       <div className="flex-1 overflow-y-auto min-h-0 w-full">
         {gameHistory.length === 0 ? (
           <div className="text-center py-8">
-            <Gamepad2 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-xl font-bold mb-2">No Games Yet</h3>
-            <p className="text-gray-600 mb-4">
+            <Gamepad2 className="w-16 h-16 mx-auto mb-4 text-black" />
+            <h3 className="text-xl font-hartone mb-2 text-black font-extralight">
+              No Games Yet
+            </h3>
+            <p className="text-gray-600 mb-4 font-sintony">
               Start playing to build up your game history!
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-5">
             {gameHistory.map((game, index) => (
-              <div
-                key={game.id}
-                className="border border-gray-200 rounded-lg p-4 bg-white"
-              >
+              <div key={game.id} className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {/* Target Color Display */}
-                    <div className="relative">
+                    {/* Color Comparison */}
+                    <div className="flex items-center gap-0 w-[90px] h-[64px] relative">
+                      {/* Target Color (Background) */}
                       <div
-                        className="w-12 h-12 border-2 border-gray-300 rounded-lg shadow-sm"
-                        style={{ backgroundColor: game.targetColor }}
+                        className="absolute right-0 w-[64px] h-[64px] border-2 rotate-3 border-[#FFFFE7] rounded-[3px]"
+                        style={{
+                          backgroundColor: game.capturedColor || "#303C76",
+                          rotate: "3deg",
+                        }}
+                      />
+                      <div
+                        className="absolute left-0 w-[58px] h-[58px] border-2 -rotate-3 border-[#FFFFE7] rounded-[3px] mt-1"
+                        style={{
+                          backgroundColor: game.targetColor || "#FF8B8B",
+                          rotate: "-3deg",
+                        }}
                       />
                     </div>
 
                     {/* Game Info */}
-                    <div className="flex flex-col gap-1">
-                      <div className="font-semibold text-sm text-black capitalize">
-                        {game.gameMode} Mode
+                    <div className="flex flex-col gap-1 w-[138px]">
+                      <div className="font-sintony font-bold text-sm text-black tracking-[7.5%]">
+                        {game.gameMode === "color-mixing"
+                          ? "Mix the colours"
+                          : "Upload the image"}
                       </div>
-                      <div className="text-xs text-gray-500">{game.date}</div>
-                      <div className="text-xs text-gray-500">
-                        {(game.timeTaken / 1000).toFixed(1)}s •{" "}
-                        {game.similarity.toFixed(1)}% similarity
+                      <div className="font-sintony text-xs text-[#616060] tracking-[7.5%]">
+                        {new Date(game.date).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })}
                       </div>
                     </div>
                   </div>
 
                   {/* Score */}
                   <div className="text-right">
-                    <div className="text-xl font-bold text-black">
+                    <div className="font-hartone text-[26px] font-normal text-black leading-[42px]">
                       {game.score}%
                     </div>
-                    {game.score >= 80 && (
-                      <div className="text-xs text-green-600 font-medium">
-                        Great!
-                      </div>
-                    )}
                   </div>
                 </div>
+
+                {/* Divider line after each item except the last */}
+                {index < gameHistory.length - 1 && (
+                  <div className="w-full h-[2px] bg-black"></div>
+                )}
               </div>
             ))}
           </div>
         )}
-      </div>
-
-      {/* Back to Menu Button */}
-      <div className="w-full pt-4">
-        <button
-          onClick={handleBackToMenu}
-          className="w-full py-3 border border-black rounded-lg hover:bg-gray-100 transition-colors font-medium"
-        >
-          Back to Menu
-        </button>
       </div>
     </div>
   );

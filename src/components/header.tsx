@@ -3,7 +3,6 @@
 import { Clock, Fire } from "@/components/icons";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useGameContext } from "@/lib/GameContext";
 import { useGameResults } from "@/lib/GameResultsContext";
@@ -90,7 +89,7 @@ export const UserProfile = () => {
     <div className="bg-transparent border border-black rounded-[7px] px-1 h-[41px] flex gap-2 items-center">
       <div className="w-[31px] h-[31px] bg-[#EEBDBD] border border-black rounded-[3px] flex items-center justify-center overflow-hidden">
         {avatar ? (
-          <Image
+          <img
             src={avatar}
             alt={displayName}
             width={31}

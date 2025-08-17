@@ -1,9 +1,6 @@
 import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { Header } from "./header";
-import { ArrowLeft, ArrowRight } from "./icons";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
-import { useEffect } from "react";
+import { MintCard } from "./MintCard";
 
 interface ShareMintScreenProps {
   targetColor: string;
@@ -17,6 +14,7 @@ interface ShareMintScreenProps {
   onContinue: () => void;
   onAttemptAgain: () => void;
   className?: string;
+  isMinting?: boolean;
 }
 
 export const ShareMintScreen = ({
@@ -31,60 +29,13 @@ export const ShareMintScreen = ({
   onContinue,
   onAttemptAgain,
   className,
+  isMinting = false,
 }: ShareMintScreenProps) => {
   const { getUserId, getUserName } = useMiniKitUser();
 
-  // Submit the game attempt when the screen loads
-  useEffect(() => {
-    // Only submit attempt for daily mode
-    if (mode !== "daily") return;
-
-    const submitAttempt = async () => {
-      try {
-        const userId = getUserId();
-        const userName = getUserName();
-
-        // Calculate final score and time score
-        const timeScore = Math.max(0, 100 - Math.floor(timeTaken / 1000)); // Simple time scoring
-        const finalScore = Math.round((similarity + timeScore) / 2);
-
-        await fetch("/api/game/attempt", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId,
-            userName,
-            targetColor,
-            capturedColor,
-            similarity,
-            timeTaken,
-            timeScore,
-            finalScore: similarity, // Use similarity as final score for now
-            date: new Date().toISOString().split("T")[0],
-          }),
-        });
-      } catch (error) {
-        console.error("Failed to submit daily attempt:", error);
-      }
-    };
-
-    submitAttempt();
-  }, [
-    targetColor,
-    capturedColor,
-    similarity,
-    timeTaken,
-    mode,
-    gameType,
-    getUserId,
-    getUserName,
-  ]);
-
   return (
     <div className="flex flex-col gap-4 items-center w-full  grow pb-8">
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col w-full items-center">
         <h1 className="font-hartone font-extralight text-[39px]  text-black text-center leading-[42px] w-full">
           YOU FOUND IT!
         </h1>
@@ -100,190 +51,12 @@ export const ShareMintScreen = ({
         )}
       </div>
       <div className="w-full grow">
-        <div
-          className="w-full  h-[400px] flex flex-col  bg-white border-[3px] border-black rounded-[12px] mx-auto relative mb-8 overflow-hidden"
-          style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
-        >
-          {/* Target Color Circle */}
-          <div
-            className="absolute w-[120px] h-[120px] border border-black rounded-[19px] rotate-6"
-            style={{
-              backgroundColor: capturedColor,
-              left: "50%",
-              top: "55%",
-              transform: "translate(-30%, -50%) rotate(6deg)",
-            }}
-          />
-
-          {/* Captured Color Circle */}
-          <div
-            className="absolute w-[120px] h-[120px] border border-black rounded-[19px] -rotate-6"
-            style={{
-              backgroundColor: targetColor,
-              left: "50%",
-              top: "55%",
-              transform: "translate(-70%, -50%) rotate(-6deg)",
-            }}
-          />
-          <div
-            className="absolute  top-[55%]  z-20"
-            style={{
-              left: "20%",
-            }}
-          >
-            <ArrowLeft />
-          </div>
-          <div
-            className="absolute  top-[55%]  z-20"
-            style={{
-              right: "20%",
-            }}
-          >
-            <ArrowRight />
-          </div>
-
-          {/* Score Display */}
-          <div className="absolute flex flex-col items-center gap-4 left-1/2 top-16 transform -translate-x-1/2">
-            <span className="font-hartone text-[54px] font-normal text-black leading-[42px]">
-              {similarity}%
-            </span>
-            <span className="font-sintony text-2xl font-normal text-black leading-4">
-              It&apos;s a Match!
-            </span>
-          </div>
-
-          {/* Color Labels */}
-          <div className="absolute font-sintony text-sm font-normal text-black left-1/4 bottom-16 transform -translate-x-1/2 text-center">
-            Target
-            <br />
-            colour
-          </div>
-          <div className="absolute font-sintony text-sm font-normal text-black right-1/4 bottom-16 transform translate-x-1/2 text-center">
-            My
-            <br />
-            colour
-          </div>
-
-          {/* Color Palette Strips */}
-          {/* Top color strip */}
-          <div className="absolute w-full h-4 flex -top-[2px] left-0">
-            {[
-              "#FF9D9D",
-              "#FFDB9D",
-              "#C1FF9D",
-              "#CB9DFF",
-              "#FFF29D",
-              "#5A9B7B",
-              "#9DB4FF",
-              "#FF9DE8",
-              "#FFCE9D",
-              "#C7FF9D",
-              "#BF9DFF",
-              "#C17C44",
-              "#D0BBB5",
-              "#9B3838",
-              "#BFFF00",
-              "#DFB43D",
-            ].map((color, index) => (
-              <div
-                key={index}
-                className="flex-1 h-3.5 border-t-2 border-l-2 border-black first:border-l-2 last:border-r-2"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-
-          {/* Bottom color strip */}
-          <div className="absolute w-full h-4 flex -bottom-[2px] left-0">
-            {[
-              "#FF9D9D",
-              "#FFDB9D",
-              "#C1FF9D",
-              "#CB9DFF",
-              "#FFF29D",
-              "#5A9B7B",
-              "#9DB4FF",
-              "#FF9DE8",
-              "#FFCE9D",
-              "#C7FF9D",
-              "#BF9DFF",
-              "#C17C44",
-              "#D0BBB5",
-              "#9B3838",
-              "#BFFF00",
-              "#DFB43D",
-            ]
-              .reverse()
-              .map((color, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "flex-1 h-3.5  border-l-2 border-black first:border-l-2 last:border-r-2",
-                    index == 0 && "border-l-0",
-                  )}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-          </div>
-
-          {/* Left color strip */}
-          <div className="absolute w-4 h-full flex flex-col -left-[2px] top-0">
-            {[
-              "#2E62DB",
-              "#A81C9A",
-              "#F80000",
-              "#FFDB9D",
-              "#C1FF9D",
-              "#CB9DFF",
-              "#FFF29D",
-              "#5A9B7B",
-              "#9DB4FF",
-              "#FF9DE8",
-              "#FFCE9D",
-              "#C7FF9D",
-              "#BF9DFF",
-              "#C17C44",
-              "#D0BBB5",
-              "#9B3838",
-              "#BFFF00",
-            ].map((color, index) => (
-              <div
-                key={index}
-                className="w-3.5 flex-1 border-l-2 border-t-2 border-black first:border-t-2 last:border-b-2"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-
-          {/* Right color strip */}
-          <div className="absolute w-4 h-full flex flex-col -right-[2px] top-0">
-            {[
-              "#2E62DB",
-              "#A81C9A",
-              "#F80000",
-              "#FFDB9D",
-              "#C1FF9D",
-              "#CB9DFF",
-              "#FFF29D",
-              "#5A9B7B",
-              "#9DB4FF",
-              "#FF9DE8",
-              "#FFCE9D",
-              "#C7FF9D",
-              "#BF9DFF",
-              "#C17C44",
-              "#D0BBB5",
-              "#9B3838",
-              "#BFFF00",
-            ].map((color, index) => (
-              <div
-                key={index}
-                className="w-3.5 flex-1 border-t-2 border-black first:border-t-2 last:border-b-2"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-        </div>
+        <MintCard
+          targetColor={targetColor}
+          capturedColor={capturedColor}
+          similarity={similarity}
+          userName={getUserName()}
+        />
       </div>
 
       {/* Action Buttons */}
@@ -300,14 +73,20 @@ export const ShareMintScreen = ({
             SHARE
           </button>
           <button
-            className="grow h-[51px]  bg-[#4ECDC4] hover:bg-[#3FB8B0]  border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal text-black transition-colors"
+            className={cn(
+              "grow h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal text-black transition-colors",
+              isMinting
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#4ECDC4] hover:bg-[#3FB8B0]",
+            )}
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
               letterSpacing: "7.5%",
             }}
             onClick={onMint}
+            disabled={isMinting}
           >
-            MINT NOW
+            {isMinting ? "MINTING..." : "MINT NOW"}
           </button>
         </div>
 

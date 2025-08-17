@@ -18,6 +18,7 @@ export async function saveDailyAttempt(
     timeTaken: number;
     timeScore: number;
     finalScore: number;
+    gameType?: string;
   },
   date?: string,
 ): Promise<number> {
@@ -27,6 +28,7 @@ export async function saveDailyAttempt(
     userId,
     userName,
     date: attemptDate,
+    gameType: attemptData.gameType || "color-mixing",
     targetColor: attemptData.targetColor,
     capturedColor: attemptData.capturedColor,
     similarity: attemptData.similarity.toString(),
@@ -48,11 +50,12 @@ export async function submitToLeaderboard(
   userId: string,
   userName: string,
   score: number,
+  gameType: string = "color-mixing",
   date?: string,
 ): Promise<{ updated: boolean }> {
   const leaderboardDate = date || new Date().toISOString().split("T")[0];
 
-  // Check if user already has an entry for this date
+  // Check if user already has an entry for this date and game type
   const existingEntry = await db
     .select({ score: leaderboard.score })
     .from(leaderboard)
@@ -60,6 +63,7 @@ export async function submitToLeaderboard(
       and(
         eq(leaderboard.userId, userId),
         eq(leaderboard.date, leaderboardDate),
+        eq(leaderboard.gameType, gameType),
       ),
     )
     .limit(1);
@@ -78,6 +82,7 @@ export async function submitToLeaderboard(
     //       and(
     //         eq(leaderboard.userId, userId),
     //         eq(leaderboard.date, leaderboardDate),
+    //         eq(leaderboard.gameType, gameType),
     //       ),
     //     );
     //   return { updated: true };
@@ -90,6 +95,7 @@ export async function submitToLeaderboard(
     userId,
     userName,
     date: leaderboardDate,
+    gameType,
     score,
   };
 
@@ -98,19 +104,32 @@ export async function submitToLeaderboard(
 }
 
 // Get leaderboard for a specific date
-export async function getLeaderboard(date: string, userId?: string) {
-  // Get top 10 scores for the date
+export async function getLeaderboard(
+  date: string,
+  userId?: string,
+  gameType: string = "all",
+) {
+  // Build where conditions
+  const whereConditions = [eq(leaderboard.date, date)];
+  if (gameType !== "all") {
+    whereConditions.push(eq(leaderboard.gameType, gameType));
+  }
+
+  // Get top 10 scores for the date and gameType
   const topScores = await db
     .select({
       userId: leaderboard.userId,
       userName: leaderboard.userName,
       score: leaderboard.score,
+      gameType: leaderboard.gameType,
       rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC)`.as(
         "rank",
       ),
     })
     .from(leaderboard)
-    .where(eq(leaderboard.date, date))
+    .where(
+      whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
+    )
     .orderBy(desc(leaderboard.score))
     .limit(10);
 
@@ -118,17 +137,27 @@ export async function getLeaderboard(date: string, userId?: string) {
 
   // If userId provided, get user's ranking
   if (userId) {
+    const userWhereConditions = [
+      eq(leaderboard.date, date),
+      eq(leaderboard.userId, userId),
+    ];
+
+    if (gameType !== "all") {
+      userWhereConditions.push(eq(leaderboard.gameType, gameType));
+    }
+
     const userRankQuery = await db
       .select({
         userId: leaderboard.userId,
         userName: leaderboard.userName,
         score: leaderboard.score,
+        gameType: leaderboard.gameType,
         rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC)`.as(
           "rank",
         ),
       })
       .from(leaderboard)
-      .where(and(eq(leaderboard.date, date), eq(leaderboard.userId, userId)))
+      .where(and(...userWhereConditions))
       .limit(1);
 
     if (userRankQuery.length > 0) {
@@ -136,9 +165,22 @@ export async function getLeaderboard(date: string, userId?: string) {
     }
   }
 
+  // Get total count for the date and gameType
+  const totalResult = await db
+    .select({
+      count: sql<number>`COUNT(*)`.as("count"),
+    })
+    .from(leaderboard)
+    .where(
+      whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
+    );
+
+  const total = totalResult[0]?.count || 0;
+
   return {
     topScores,
     userRanking,
+    total,
   };
 }
 
@@ -150,9 +192,10 @@ export async function getUserGameHistory(userId: string, limit: number = 20) {
       score: dailyAttempts.finalScore,
       timeTaken: dailyAttempts.timeTaken,
       targetColor: dailyAttempts.targetColor,
+      capturedColor: dailyAttempts.capturedColor,
       similarity: dailyAttempts.similarity,
       date: dailyAttempts.date,
-      gameMode: sql<string>`'daily'`.as("gameMode"), // Always daily for this simplified version
+      gameMode: dailyAttempts.gameType, // Always daily for this simplified version
     })
     .from(dailyAttempts)
     .where(eq(dailyAttempts.userId, userId))

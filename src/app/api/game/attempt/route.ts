@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
       timeScore,
       finalScore,
       date,
+      gameType,
     } = await request.json();
 
     // Validate required fields
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
         and(
           eq(dailyAttempts.userId, userId),
           eq(dailyAttempts.date, attemptDate),
+          eq(dailyAttempts.gameType, gameType),
         ),
       )
       .limit(1);
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
         timeTaken,
         timeScore,
         finalScore,
+        gameType: gameType || "color-mixing", // Provide default gameType
       },
       attemptDate,
     );
@@ -80,6 +83,7 @@ export async function POST(request: NextRequest) {
         userId,
         userName || "Anonymous",
         finalScore,
+        gameType || "color-mixing", // Pass gameType to leaderboard
         attemptDate,
       );
     } catch (error) {

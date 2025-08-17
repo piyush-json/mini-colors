@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
 import Webcam from "react-webcam";
-import Image from "next/image";
 import { useGameContextRequired } from "@/lib/GameContext";
 import { cn } from "@/lib/utils";
 interface FindColorGameProps {
@@ -14,6 +13,7 @@ interface FindColorGameProps {
   isMultiplayer?: boolean;
   className?: string;
   timeLimit?: number; // Time limit in seconds
+  mode?: "daily" | "practice";
 }
 
 export const FindColorGame = ({
@@ -22,6 +22,7 @@ export const FindColorGame = ({
   isMultiplayer = false,
   className = "",
   timeLimit,
+  mode = "practice",
 }: FindColorGameProps) => {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [gameStartTime, setGameStartTime] = useState<number | null>(null);
@@ -227,11 +228,10 @@ export const FindColorGame = ({
       {gameStage === "captured" && capturedImage && (
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-full h-[360px] border border-black rounded-[9px] overflow-hidden">
-            <Image
+            <img
               src={capturedImage}
               alt="Captured"
-              fill
-              className="object-cover"
+              className="object-cover w-full"
             />
             {/* Retake button positioned over the image */}
             <div className="absolute bottom-[30px] left-1/2 transform -translate-x-1/2">
@@ -249,22 +249,25 @@ export const FindColorGame = ({
           </div>
 
           <button
-            className="w-full h-[51px] bg-[#FFE254] border border-black rounded-[39px] flex items-center justify-center cursor-pointer font-hartone text-[30px] font-normal text-black"
+            className={cn(
+              "w-full h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
+              {
+                "bg-[#FFE254] text-black cursor-pointer": !isLoading,
+                "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed": isLoading,
+              },
+            )}
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
               letterSpacing: "7.5%",
             }}
             onClick={() => {
+              if (isLoading) return;
               console.log("Submitting result...");
-              submitResult((score: number, timeTaken: number) => {
-                const actualTimeTaken = gameStartTime
-                  ? Math.floor((Date.now() - gameStartTime) / 1000)
-                  : timeTaken;
-                onScoreSubmit(score, actualTimeTaken, targetColor || undefined);
-              });
+              submitResult(onScoreSubmit, mode);
             }}
+            disabled={isLoading}
           >
-            SUBMIT
+            {isLoading ? "SUBMITTING..." : "SUBMIT"}
           </button>
         </div>
       )}

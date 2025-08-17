@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ColorSDK, ColorMatch, GameState } from "./color-sdk";
+import { useMiniKitUser } from "./useMiniKitUser";
 import Webcam from "react-webcam";
 
 export interface UseColorGameReturn {
@@ -30,7 +31,13 @@ export interface UseColorGameReturn {
   captureColorPhoto: () => void;
   retakePhoto: () => void;
   submitResult: (
-    onScoreSubmit: (score: number, timeTaken: number) => void,
+    onScoreSubmit: (
+      score: number,
+      timeTaken: number,
+      actualTargetColor?: string,
+      actualCapturedColor?: string,
+    ) => void,
+    mode?: "daily" | "practice",
   ) => void;
   resetFindColorGame: () => void;
   handleWebcamReady: () => void;
@@ -56,6 +63,7 @@ export const useColorGame = (
   options?: UseColorGameOptions,
 ): UseColorGameReturn => {
   const initialMode = options?.initialMode || "practice";
+  const { getUserId, getUserName } = useMiniKitUser();
 
   const [gameState, setGameState] = useState<GameState>({
     isPlaying: false,
@@ -241,12 +249,21 @@ export const useColorGame = (
   }, []);
 
   const submitResult = useCallback(
-    async (onScoreSubmit: (score: number, timeTaken: number) => void) => {
+    async (
+      onScoreSubmit: (
+        score: number,
+        timeTaken: number,
+        actualTargetColor?: string,
+        actualCapturedColor?: string,
+      ) => void,
+      mode?: "daily" | "practice",
+    ) => {
       if (!capturedImage) return;
 
       try {
+        setIsLoading(true);
         const img = new globalThis.Image();
-        img.onload = () => {
+        img.onload = async () => {
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
           if (!canvas || !ctx) return;
@@ -263,6 +280,7 @@ export const useColorGame = (
 
           // Store the captured color
           setCapturedColor(capturedColorRGB);
+
           // Calculate score using ColorSDK
           const result = ColorSDK.calculateScore(
             gameState.targetColor,
@@ -271,16 +289,60 @@ export const useColorGame = (
             Date.now(),
           );
           const score = Math.round(result.finalScore);
+          const timeTakenMs = timer * 1000;
 
           setGameFinished(true);
           setGameState((prev) => ({ ...prev, score }));
           stopTimer();
 
-          onScoreSubmit(score, timer * 1000);
+          // Submit to API if in daily mode
+          if (mode === "daily") {
+            try {
+              const userId = getUserId();
+              const userName = getUserName();
+
+              // Calculate time score and final score
+              const timeScore = Math.max(
+                0,
+                100 - Math.floor(timeTakenMs / 1000),
+              );
+              const finalScore = Math.round((score + timeScore) / 2);
+
+              await fetch("/api/game/attempt", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  userId,
+                  userName,
+                  targetColor: gameState.targetColor,
+                  capturedColor: capturedColorRGB,
+                  similarity: score,
+                  timeTaken: timeTakenMs,
+                  timeScore,
+                  finalScore: score, // Use similarity as final score
+                  date: new Date().toISOString().split("T")[0],
+                  gameType: "finding",
+                }),
+              });
+            } catch (error) {
+              console.error("Failed to save daily finding attempt:", error);
+            }
+          }
+
+          onScoreSubmit(
+            score,
+            timeTakenMs,
+            gameState.targetColor,
+            capturedColorRGB,
+          );
+          setIsLoading(false);
         };
         img.src = capturedImage;
       } catch (error) {
         console.error("Submit failed:", error);
+        setIsLoading(false);
       }
     },
     [
@@ -289,6 +351,8 @@ export const useColorGame = (
       gameState.startTime,
       timer,
       stopTimer,
+      getUserId,
+      getUserName,
     ],
   );
 
