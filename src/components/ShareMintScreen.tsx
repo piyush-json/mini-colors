@@ -2,6 +2,8 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Header } from "./header";
 import { ArrowLeft, ArrowRight } from "./icons";
+import { useMiniKitUser } from "@/lib/useMiniKitUser";
+import { useEffect } from "react";
 
 interface ShareMintScreenProps {
   targetColor: string;
@@ -30,6 +32,56 @@ export const ShareMintScreen = ({
   onAttemptAgain,
   className,
 }: ShareMintScreenProps) => {
+  const { getUserId, getUserName } = useMiniKitUser();
+
+  // Submit the game attempt when the screen loads
+  useEffect(() => {
+    // Only submit attempt for daily mode
+    if (mode !== "daily") return;
+
+    const submitAttempt = async () => {
+      try {
+        const userId = getUserId();
+        const userName = getUserName();
+
+        // Calculate final score and time score
+        const timeScore = Math.max(0, 100 - Math.floor(timeTaken / 1000)); // Simple time scoring
+        const finalScore = Math.round((similarity + timeScore) / 2);
+
+        await fetch("/api/game/attempt", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId,
+            userName,
+            targetColor,
+            capturedColor,
+            similarity,
+            timeTaken,
+            timeScore,
+            finalScore: similarity, // Use similarity as final score for now
+            date: new Date().toISOString().split("T")[0],
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to submit daily attempt:", error);
+      }
+    };
+
+    submitAttempt();
+  }, [
+    targetColor,
+    capturedColor,
+    similarity,
+    timeTaken,
+    mode,
+    gameType,
+    getUserId,
+    getUserName,
+  ]);
+
   return (
     <div className="flex flex-col gap-4 items-center w-full  grow pb-8">
       <div className="flex flex-col items-center">

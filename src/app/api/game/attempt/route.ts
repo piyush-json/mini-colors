@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import {
-  createOrGetUser,
-  createGameSession,
-  saveGameAttempt,
-} from "@/db/queries";
-
-function getUserIdentifier(request: NextRequest) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0] : "unknown";
-  const userAgent = request.headers.get("user-agent") || "unknown";
-  return `${ip}-${userAgent}`;
-}
+import { dailyAttempts } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
+import { saveDailyAttempt, submitToLeaderboard } from "@/db/queries";
 
 export async function POST(request: NextRequest) {
   try {
     const {
-      gameMode,
+      userId,
+      userName,
       targetColor,
       capturedColor,
       similarity,
@@ -28,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (
-      !gameMode ||
+      !userId ||
       !targetColor ||
       !capturedColor ||
       typeof similarity !== "number" ||
@@ -42,38 +34,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userIdentifier = getUserIdentifier(request);
-    const userId = await createOrGetUser(userIdentifier);
+    const attemptDate = date || new Date().toISOString().split("T")[0];
 
-    // Create a game session
-    const sessionId = await createGameSession(
+    // Check if user already has a daily attempt today
+    const existingAttempt = await db
+      .select({ id: dailyAttempts.id })
+      .from(dailyAttempts)
+      .where(
+        and(
+          eq(dailyAttempts.userId, userId),
+          eq(dailyAttempts.date, attemptDate),
+        ),
+      )
+      .limit(1);
+
+    if (existingAttempt.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Daily attempt already completed today. Only one attempt per day is allowed.",
+        },
+        { status: 429 },
+      );
+    }
+
+    // Save the daily attempt
+    const attemptId = await saveDailyAttempt(
       userId,
-      gameMode,
-      targetColor,
-      gameMode === "daily" ? "" : undefined, // dailyColorId would be set elsewhere for daily mode
+      userName || "Anonymous",
+      {
+        targetColor,
+        capturedColor,
+        similarity,
+        timeTaken,
+        timeScore,
+        finalScore,
+      },
+      attemptDate,
     );
 
-    // Save the game attempt
-    const attemptId = await saveGameAttempt(sessionId, userId, {
-      attemptNumber: 1, // For now, each attempt is a separate session
-      capturedColor,
-      targetColor,
-      similarity,
-      timeTaken,
-      timeScore,
-      finalScore,
-    });
+    // Automatically submit to leaderboard
+    let leaderboardResult = null;
+    try {
+      leaderboardResult = await submitToLeaderboard(
+        userId,
+        userName || "Anonymous",
+        finalScore,
+        attemptDate,
+      );
+    } catch (error) {
+      console.error("Failed to submit to leaderboard:", error);
+    }
 
     return NextResponse.json({
       success: true,
       attemptId,
-      sessionId,
-      message: "Game attempt saved successfully",
+      leaderboardSubmitted: !!leaderboardResult,
+      isNewBest: leaderboardResult?.updated || false,
+      message: "Daily attempt saved successfully",
     });
   } catch (error) {
-    console.error("Error saving game attempt:", error);
+    console.error("Error saving daily attempt:", error);
     return NextResponse.json(
-      { error: "Failed to save game attempt" },
+      { error: "Failed to save daily attempt" },
       { status: 500 },
     );
   }

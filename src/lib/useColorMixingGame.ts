@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ColorMixingSDK, ColorMixingState } from "./mix-sdk";
+import { useMiniKitUser } from "./useMiniKitUser";
 
 interface UseColorMixingGameOptions {
   isMultiplayer?: boolean;
@@ -10,6 +11,7 @@ interface UseColorMixingGameOptions {
 }
 
 export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
+  const { getUserId, getUserName } = useMiniKitUser();
   const {
     isMultiplayer = false,
     targetColor,
@@ -68,6 +70,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     },
     [sdk],
   );
+
   useEffect(() => {
     if (
       isMultiplayer &&
@@ -112,8 +115,11 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
       onScoreSubmit(attempt.matchPercentage, attempt.timeTaken);
     }
 
-    if (!isMultiplayer && attempt) {
+    // Save attempt to database (only for daily mode)
+    if (!isMultiplayer && attempt && mode === "daily") {
       try {
+        const userId = getUserId();
+        const userName = getUserName();
         const targetColorHex = `#${attempt.targetColor.r.toString(16).padStart(2, "0")}${attempt.targetColor.g.toString(16).padStart(2, "0")}${attempt.targetColor.b.toString(16).padStart(2, "0")}`;
         const mixedColorHex = `#${attempt.mixedColor.r.toString(16).padStart(2, "0")}${attempt.mixedColor.g.toString(16).padStart(2, "0")}${attempt.mixedColor.b.toString(16).padStart(2, "0")}`;
 
@@ -123,7 +129,8 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            gameMode: "mixing",
+            userId,
+            userName,
             targetColor: targetColorHex,
             capturedColor: mixedColorHex,
             similarity: attempt.matchPercentage,
@@ -134,12 +141,13 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
           }),
         });
       } catch (error) {
-        console.error("Failed to save mixing game attempt:", error);
+        console.error("Failed to save daily mixing attempt:", error);
       }
     }
 
     return attempt;
-  }, [sdk, isMultiplayer, onScoreSubmit]);
+  }, [sdk, isMultiplayer, onScoreSubmit, getUserId, getUserName, mode]);
+
   const handleReset = useCallback(() => {
     sdk.resetChallenge();
   }, [sdk]);
