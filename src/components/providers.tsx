@@ -1,11 +1,22 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { base } from "wagmi/chains";
-import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
+import { MiniKitProvider, useMiniKit } from "@coinbase/onchainkit/minikit";
 import { SocketProvider } from "./socket-provider";
 import { GameResultsProvider } from "@/lib/GameResultsContext";
 import { GameProvider } from "@/lib/GameContext";
+
+const Child = ({ children }: { children: ReactNode }) => {
+  const { setFrameReady, isFrameReady } = useMiniKit();
+
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
+  return <>{children}</>;
+};
 
 export function Providers(props: { children: ReactNode }) {
   return (
@@ -24,7 +35,7 @@ export function Providers(props: { children: ReactNode }) {
               },
             }}
           >
-            {props.children}
+            <Child>{props.children}</Child>
           </MiniKitProvider>
         </SocketProvider>
       </GameProvider>
