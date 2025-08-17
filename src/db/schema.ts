@@ -26,6 +26,7 @@ export const dailyAttempts = pgTable(
     timeTaken: decimal("time_taken", { precision: 8, scale: 3 }).notNull(), // seconds with milliseconds
     timeScore: integer("time_score").notNull(),
     finalScore: integer("final_score").notNull(),
+    streak: integer("streak").notNull().default(1), // Current streak when this attempt was made
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

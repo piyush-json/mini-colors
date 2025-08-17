@@ -6,6 +6,7 @@ import { saveDailyAttempt, submitToLeaderboard } from "@/db/queries";
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
     const {
       userId,
       userName,
@@ -17,7 +18,18 @@ export async function POST(request: NextRequest) {
       finalScore,
       date,
       gameType,
-    } = await request.json();
+    } = body as {
+      userId: string;
+      userName?: string;
+      targetColor: string;
+      capturedColor: string;
+      similarity: number;
+      timeTaken: number;
+      timeScore: number;
+      finalScore: number;
+      date?: string;
+      gameType?: string;
+    };
 
     // Validate required fields
     if (
@@ -45,7 +57,7 @@ export async function POST(request: NextRequest) {
         and(
           eq(dailyAttempts.userId, userId),
           eq(dailyAttempts.date, attemptDate),
-          eq(dailyAttempts.gameType, gameType),
+          eq(dailyAttempts.gameType, gameType || "color-mixing"),
         ),
       )
       .limit(1);
@@ -60,7 +72,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save the daily attempt
+    // Calculate streak: get yesterday's attempt
+    const yesterday = new Date(attemptDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    const yesterdayAttempt = await db
+      .select({ streak: dailyAttempts.streak })
+      .from(dailyAttempts)
+      .where(
+        and(
+          eq(dailyAttempts.userId, userId),
+          eq(dailyAttempts.date, yesterdayStr),
+        ),
+      )
+      .limit(1);
+
+    // If yesterday's attempt exists, increment streak by 1, otherwise start with 1
+    const currentStreak =
+      yesterdayAttempt.length > 0 ? yesterdayAttempt[0].streak + 1 : 1;
+
+    // Save the daily attempt with calculated streak
     const attemptId = await saveDailyAttempt(
       userId,
       userName || "Anonymous",
@@ -72,6 +104,7 @@ export async function POST(request: NextRequest) {
         timeScore,
         finalScore,
         gameType: gameType || "color-mixing", // Provide default gameType
+        streak: currentStreak,
       },
       attemptDate,
     );
@@ -93,6 +126,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       attemptId,
+      streak: currentStreak,
       leaderboardSubmitted: !!leaderboardResult,
       isNewBest: leaderboardResult?.updated || false,
       message: "Daily attempt saved successfully",

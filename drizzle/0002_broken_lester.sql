@@ -1,0 +1,1 @@
+ALTER TABLE "daily_attempts" ADD COLUMN "streak" integer DEFAULT 1 NOT NULL;

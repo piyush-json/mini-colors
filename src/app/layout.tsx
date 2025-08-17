@@ -58,7 +58,7 @@ export default function RootLayout({
       <body className="font-mono bg-background text-foreground flex flex-col items-center justify-center">
         <Providers>
           <div
-            className="min-h-screen px-8 font-sintony w-screen flex flex-col items-center gap-8"
+            className="min-h-full px-8 font-sintony w-screen flex flex-col items-center gap-8"
             style={{ backgroundColor: "#FFFFE7" }}
           >
             <Header />

@@ -18,6 +18,7 @@ export async function saveDailyAttempt(
     timeTaken: number;
     timeScore: number;
     finalScore: number;
+    streak: number;
     gameType?: string;
   },
   date?: string,
@@ -35,6 +36,7 @@ export async function saveDailyAttempt(
     timeTaken: attemptData.timeTaken.toString(),
     timeScore: attemptData.timeScore,
     finalScore: attemptData.finalScore,
+    streak: attemptData.streak,
   };
 
   const result = await db
@@ -223,4 +225,35 @@ export async function getUserGameHistory(userId: string, limit: number = 20) {
       averageScore,
     },
   };
+}
+
+// Get current streak for a user (optimized - just get latest streak value)
+export async function getUserStreak(userId: string): Promise<number> {
+  const latestAttempt = await db
+    .select({
+      streak: dailyAttempts.streak,
+      date: dailyAttempts.date,
+    })
+    .from(dailyAttempts)
+    .where(eq(dailyAttempts.userId, userId))
+    .orderBy(desc(dailyAttempts.date))
+    .limit(1);
+
+  if (latestAttempt.length === 0) {
+    return 0;
+  }
+
+  const { streak, date } = latestAttempt[0];
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  // If the latest attempt was today or yesterday, return the streak
+  // Otherwise, the streak has been broken
+  if (date === today || date === yesterdayStr) {
+    return streak;
+  }
+
+  return 0;
 }

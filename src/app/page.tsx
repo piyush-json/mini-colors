@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { useDailyColor, useGameResults } from "@/lib/GameResultsContext";
+import { useUserStreak } from "@/lib/useUserStreak";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -29,6 +30,7 @@ const Title = () => {
 export default function HomePage() {
   const { dailyColor, isLoadingDailyColor } = useDailyColor();
   const { setGameMode } = useGameResults();
+  const { streak, isLoading: isLoadingStreak } = useUserStreak();
   const router = useRouter();
 
   const handlePlayClick = () => {
@@ -61,7 +63,11 @@ export default function HomePage() {
             <Fire />
           </div>
           <span className="text-[20px] leading-[22px] text-[#FFFFE7] font-hartone">
-            5 Days Streak
+            {isLoadingStreak
+              ? "Loading..."
+              : streak > 0
+                ? `${streak} Day${streak === 1 ? "" : "s"} Streak`
+                : "Start Your Streak!"}
           </span>
         </div>
         <div

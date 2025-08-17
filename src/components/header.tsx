@@ -133,7 +133,7 @@ export const Header = () => {
   return (
     <div className="flex justify-between items-center border-b-2 border-black pb-5 pt-7 w-full">
       {isHomePage ? (
-        <Fire />
+        <img src="/i.png" alt="Color Game Logo" className="w-60px h-auto" />
       ) : (
         <Link href="/" className="flex items-center">
           <BackButton />
