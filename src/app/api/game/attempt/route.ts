@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       userId,
       gameMode,
       targetColor,
-      gameMode === "daily" ? null : undefined, // dailyColorId would be set elsewhere for daily mode
+      gameMode === "daily" ? "" : undefined, // dailyColorId would be set elsewhere for daily mode
     );
 
     // Save the game attempt

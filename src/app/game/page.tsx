@@ -28,24 +28,32 @@ export default function GamePageContent() {
   const { gameState, setDailyMode, setPracticeMode, generateNewPracticeColor } =
     useColorGame({ initialMode: currentMode });
 
+  // Initialize the game mode based on the current mode set from homepage
+  useEffect(() => {
+    if (currentMode === "daily") {
+      setDailyMode();
+      if (!dailyColor && !isLoadingDailyColor) {
+        loadDailyColor();
+      }
+    } else {
+      setPracticeMode();
+      generateNewPracticeColor();
+    }
+  }, [
+    currentMode,
+    setDailyMode,
+    setPracticeMode,
+    generateNewPracticeColor,
+    dailyColor,
+    isLoadingDailyColor,
+    loadDailyColor,
+  ]);
+
   useEffect(() => {
     if (currentMode === "daily" && !dailyColor && !isLoadingDailyColor) {
       loadDailyColor();
     }
   }, [currentMode, dailyColor, isLoadingDailyColor, loadDailyColor]);
-
-  const handleModeChange = (mode: "daily" | "practice") => {
-    if (mode === "practice") {
-      setPracticeMode();
-      generateNewPracticeColor();
-    } else {
-      setDailyMode();
-      if (!dailyColor && !isLoadingDailyColor) {
-        loadDailyColor();
-      }
-    }
-    setGameMode(mode);
-  };
 
   const getTargetColor = () => {
     if (currentMode === "daily") {
@@ -108,45 +116,6 @@ export default function GamePageContent() {
   return (
     <div className="flex flex-col items-center gap-4 w-full justify-between grow pb-8">
       <div className="flex flex-col items-center gap-1 w-full">
-        <div className="flex w-80">
-          <div
-            className={cn(
-              "flex-1 flex justify-center items-center px-6 py-2 border border-black cursor-pointer font-hartone text-sm tracking-[7.5%]",
-              currentMode === "daily"
-                ? "bg-black text-[#FFFFE7]"
-                : "bg-[#FFFFE7] text-black",
-            )}
-            style={{
-              borderRadius: "4px 0px 0px 4px",
-              boxShadow:
-                currentMode === "daily"
-                  ? "0px 1.5px 0px 0px rgba(0, 0, 0, 1)"
-                  : "none",
-            }}
-            onClick={() => handleModeChange("daily")}
-          >
-            DAILY
-          </div>
-          <div
-            className={cn(
-              "flex-1 flex justify-center items-center px-6 py-2 border border-black cursor-pointer font-hartone text-sm tracking-[7.5%]",
-              currentMode === "practice"
-                ? "bg-black text-[#FFFFE7]"
-                : "bg-[#FFFFE7] text-black",
-            )}
-            style={{
-              borderRadius: "0px 4px 4px 0px",
-              boxShadow:
-                currentMode === "practice"
-                  ? "0px 1.5px 0px 0px rgba(0, 0, 0, 1)"
-                  : "none",
-            }}
-            onClick={() => handleModeChange("practice")}
-          >
-            PRACTICE
-          </div>
-        </div>
-
         {/* Game Mode Selector */}
         <div className="flex w-80">
           <div

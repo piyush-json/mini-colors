@@ -111,3 +111,75 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* Custom smooth slider styles */
+@layer utilities {
+  /* Remove default range input styling for all browsers */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    outline: none;
+  }
+
+  /* Remove default track styling */
+  input[type="range"]::-webkit-slider-track {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+
+  /* Remove default thumb styling */
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: none;
+    width: 48px;
+    height: 48px;
+    cursor: grab;
+  }
+
+  input[type="range"]:active::-webkit-slider-thumb {
+    cursor: grabbing;
+  }
+
+  /* Firefox specific */
+  input[type="range"]::-moz-range-track {
+    background: transparent;
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    background: transparent;
+    border: none;
+    width: 48px;
+    height: 48px;
+    cursor: grab;
+  }
+
+  input[type="range"]:active::-moz-range-thumb {
+    cursor: grabbing;
+  }
+
+  /* IE/Edge */
+  input[type="range"]::-ms-track {
+    background: transparent;
+    border: none;
+    color: transparent;
+  }
+
+  input[type="range"]::-ms-thumb {
+    background: transparent;
+    border: none;
+    width: 48px;
+    height: 48px;
+    cursor: grab;
+  }
+
+  input[type="range"]:active::-ms-thumb {
+    cursor: grabbing;
+  }
+}

@@ -33,7 +33,7 @@ export const ShareMintScreen = ({
   return (
     <div className="flex flex-col gap-4 items-center w-full  grow pb-8">
       <div className="flex flex-col items-center">
-        <h1 className="font-hartone text-[39px] font-normal text-black text-center leading-[42px] w-full">
+        <h1 className="font-hartone font-extralight text-[39px]  text-black text-center leading-[42px] w-full">
           YOU FOUND IT!
         </h1>
         <p className="font-sintony text-sm font-normal text-black text-center mt-2">
@@ -49,14 +49,14 @@ export const ShareMintScreen = ({
       </div>
       <div className="w-full grow">
         <div
-          className="w-full  h-[400px] bg-white border-[3px] border-black rounded-[12px] mx-auto relative mb-8 overflow-hidden"
+          className="w-full  h-[400px] flex flex-col  bg-white border-[3px] border-black rounded-[12px] mx-auto relative mb-8 overflow-hidden"
           style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
         >
           {/* Target Color Circle */}
           <div
             className="absolute w-[120px] h-[120px] border border-black rounded-[19px] rotate-6"
             style={{
-              backgroundColor: targetColor,
+              backgroundColor: capturedColor,
               left: "50%",
               top: "55%",
               transform: "translate(-30%, -50%) rotate(6deg)",
@@ -67,7 +67,7 @@ export const ShareMintScreen = ({
           <div
             className="absolute w-[120px] h-[120px] border border-black rounded-[19px] -rotate-6"
             style={{
-              backgroundColor: capturedColor,
+              backgroundColor: targetColor,
               left: "50%",
               top: "55%",
               transform: "translate(-70%, -50%) rotate(-6deg)",
@@ -248,7 +248,7 @@ export const ShareMintScreen = ({
             SHARE
           </button>
           <button
-            className="grow h-[51px] bg-white border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal text-black hover:bg-gray-50 transition-colors"
+            className="grow h-[51px]  bg-[#4ECDC4] hover:bg-[#3FB8B0]  border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal text-black transition-colors"
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
               letterSpacing: "7.5%",
@@ -261,7 +261,7 @@ export const ShareMintScreen = ({
 
         {mode === "practice" && (
           <button
-            className="w-full h-[51px] bg-[#4ECDC4] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[24px] font-normal text-black hover:bg-[#3FB8B0] transition-colors"
+            className="w-full h-[51px] bg-white hover:bg-gray-50 border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal text-black transition-colors"
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
               letterSpacing: "7.5%",

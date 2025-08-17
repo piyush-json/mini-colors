@@ -1,10 +1,12 @@
 "use client";
 
-import { Fire } from "@/components/icons";
+import { Clock, Fire } from "@/components/icons";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useGameContext } from "@/lib/GameContext";
+import { useGameResults } from "@/lib/GameResultsContext";
+import { useEffect } from "react";
 
 export const BackButton = () => {
   return (
@@ -17,7 +19,7 @@ export const BackButton = () => {
   );
 };
 
-export const Timer = () => {
+export const GameTimer = () => {
   const gameContext = useGameContext();
   const timer = gameContext?.timer || 0;
 
@@ -27,38 +29,30 @@ export const Timer = () => {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-  console.log("Timer value:", timer);
+
+  if (timer <= 0) return null;
+
   return (
     <div
       className="w-[41px] h-[41px] bg-white border border-black rounded-[5px] flex items-center justify-center"
       style={{ boxShadow: "0px 1.5px 0px 0px rgba(0, 0, 0, 1)" }}
     >
-      {timer > 0 ? (
-        <span className="font-sintony text-xs font-bold text-black">
-          {formatTime(timer)}
-        </span>
-      ) : (
-        <svg
-          width="25"
-          height="25"
-          viewBox="0 0 25 25"
-          className="w-[25px] h-[25px]"
-        >
-          <circle
-            cx="12.5"
-            cy="12.5"
-            r="11.82"
-            fill="#FFF2A9"
-            stroke="#433930"
-            strokeWidth="1"
-          />
-          <path d="M12.22 7.02L12.74 12.69L12.22 7.02Z" fill="#433930" />
-          <path d="M11.35 5.83L13.65 7.72L11.35 5.83Z" fill="#433930" />
-          <path d="M12.65 13.47L17.45 19.12L12.65 13.47Z" fill="#433930" />
-          <circle cx="13.45" cy="13.96" r="1.05" fill="#EBCB42" />
-        </svg>
-      )}
+      <span className="font-sintony text-xs font-bold text-black">
+        {formatTime(timer)}
+      </span>
     </div>
+  );
+};
+
+export const HistoryButton = () => {
+  return (
+    <Link
+      href="/history"
+      className="w-[41px] h-[41px] bg-white border border-black rounded-[5px] flex items-center justify-center"
+      style={{ boxShadow: "0px 1.5px 0px 0px rgba(0, 0, 0, 1)" }}
+    >
+      <Clock />
+    </Link>
   );
 };
 
@@ -78,6 +72,25 @@ export const UserProfile = () => {
 export const Header = () => {
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+  const showTimer = pathname === "/game" || pathname === "/results";
+  const gameContext = useGameContext();
+  const { clearResults } = useGameResults();
+
+  // Reset game state when navigating to home page
+  useEffect(() => {
+    if (isHomePage) {
+      // Reset all game state when user goes back to home
+      if (gameContext) {
+        // Reset timer and game state
+        gameContext.updateTimer(0);
+        gameContext.stopTimer();
+        gameContext.resetFindColorGame();
+      }
+      // Clear any results
+      clearResults();
+    }
+  }, [isHomePage, gameContext, clearResults]);
+
   return (
     <div className="flex justify-between items-center border-b-2 border-black pb-5 pt-7 w-full">
       {isHomePage ? (
@@ -88,7 +101,8 @@ export const Header = () => {
         </Link>
       )}
       <div className="flex items-center gap-1">
-        <Timer />
+        {showTimer && <GameTimer />}
+        <HistoryButton />
         <UserProfile />
       </div>
     </div>

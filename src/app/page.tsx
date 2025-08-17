@@ -1,10 +1,17 @@
 "use client";
 
-import { Brush, Fire } from "@/components/icons";
+import {
+  Brush,
+  Fire,
+  LeaderBoard,
+  PartyIcon,
+  Practice,
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
-import { useDailyColor } from "@/lib/GameResultsContext";
+import { useDailyColor, useGameResults } from "@/lib/GameResultsContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const Title = () => {
   return (
@@ -21,6 +28,18 @@ const Title = () => {
 
 export default function HomePage() {
   const { dailyColor, isLoadingDailyColor } = useDailyColor();
+  const { setGameMode } = useGameResults();
+  const router = useRouter();
+
+  const handlePlayClick = () => {
+    setGameMode("daily");
+    router.push("/game");
+  };
+
+  const handlePracticeClick = () => {
+    setGameMode("practice");
+    router.push("/game");
+  };
 
   // Calculate next GMT midnight
   const now = new Date();
@@ -46,7 +65,7 @@ export default function HomePage() {
           </span>
         </div>
         <div
-          className="w-[220px] h-[220px] border border-black rounded-[30px]  relative"
+          className="w-full h-[220px] border border-black rounded-[30px]  relative"
           style={{
             backgroundColor: isLoadingDailyColor
               ? "#f0f0f0"
@@ -59,29 +78,28 @@ export default function HomePage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
             </div>
           )}
-          <div className="absolute right-0 translate-x-[5%] top-2">
+          <div className="absolute right-0 translate-x-[5%] top-5">
             <Brush />
           </div>
         </div>
-        <p className="text-[14px] leading-4 text-black font-normal font-sintony pt-5">
+        <p className="text-[14px] leading-4 text-black font-normal font-sintony pt-2">
           the colour refreshes in {refreshTime}
         </p>
       </div>
 
       <div className="space-y-3 w-full">
         {/* Play Button */}
-        <Link href="/game" className="block">
-          <Button
-            size="lg"
-            className="w-full h-[68px] rounded-[39px] border border-black text-black font-normal text-[30px] sm:text-[34px] leading-[33px] sm:leading-[37px] tracking-[2.25px] sm:tracking-[2.55px]"
-            style={{
-              backgroundColor: "#FFE254",
-              boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
-            }}
-          >
-            PLAY
-          </Button>
-        </Link>
+        <Button
+          size="lg"
+          className="w-full h-[68px] rounded-[39px] border border-black text-black font-normal text-[34px] leading-[33px] sm:leading-[37px] tracking-[2.25px] sm:tracking-[2.55px]"
+          style={{
+            backgroundColor: "#FFE254",
+            boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
+          }}
+          onClick={handlePlayClick}
+        >
+          PLAY
+        </Button>
 
         <div className="flex gap-3">
           <Link href="/party" className="flex-1">
@@ -89,51 +107,30 @@ export default function HomePage() {
               className="w-full h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
               style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
             >
-              <div className="w-6 h-8 relative">
-                <svg width="24" height="35" viewBox="0 0 24 35" fill="none">
-                  <path d="M12 3L8 32L16 32L12 3Z" fill="#CC1B65" />
-                  <path d="M11 0L13 32L11 0Z" fill="#B81A6B" />
-                  <circle
-                    cx="10"
-                    cy="5"
-                    r="2"
-                    fill="#ECC32E"
-                    stroke="#272425"
-                  />
-                  <circle cx="6" cy="8" r="1" fill="#E8CE47" />
-                  <circle cx="12" cy="0" r="1" fill="#E8CE47" />
-                  <circle cx="16" cy="9" r="1" fill="#E8CE47" />
-                </svg>
-              </div>
-              <span className="text-[16px] sm:text-[18px] leading-[18px] sm:leading-[20px] tracking-[1.2px] sm:tracking-[1.35px] text-black font-normal font-hartone">
-                PARTY mODE
-              </span>
+              <PartyIcon />
+              {/* <span className="text-[18px] leading-[18px] sm:leading-[20px] tracking-[1.2px] sm:tracking-[1.35px] text-black font-normal font-hartone">
+                PARTY MODE
+              </span> */}
             </div>
           </Link>
 
-          {/* Leaderboard */}
+          {/* Practice Button */}
+          <button
+            className="w-full flex-1 h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
+            style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
+            onClick={handlePracticeClick}
+          >
+            <Practice />
+          </button>
           <Link href="/leaderboard" className="flex-1">
             <div
               className="w-full h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
               style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
             >
-              <div className="w-9 h-8 flex items-end">
-                <div
-                  className="w-3 h-5 border border-black rounded-t-sm"
-                  style={{ backgroundColor: "#FABABA" }}
-                ></div>
-                <div
-                  className="w-3 h-8 border border-black rounded-t-sm"
-                  style={{ backgroundColor: "#C1FABA" }}
-                ></div>
-                <div
-                  className="w-3 h-4 border border-black rounded-t-sm"
-                  style={{ backgroundColor: "#BACCFA" }}
-                ></div>
-              </div>
-              <span className="text-[16px] sm:text-[18px] leading-[18px] sm:leading-[20px] tracking-[1.2px] sm:tracking-[1.35px] text-black font-normal font-hartone">
+              <LeaderBoard />
+              {/* <span className="text-[18px] leading-[18px] sm:leading-[20px] tracking-[1.2px] sm:tracking-[1.35px] text-black font-normal font-hartone">
                 LEADERBOARD
-              </span>
+              </span> */}
             </div>
           </Link>
         </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useColorMixingGame } from "@/lib/useColorMixingGame";
 import { useGameContext } from "@/lib/GameContext";
+import { Slider } from "@/components/ui/slider";
 
 interface ColorMixingGameProps {
   targetColor?: string | null;
@@ -34,42 +35,22 @@ const ColorSlider = ({
 }: ColorSliderProps) => {
   return (
     <div className="flex items-center w-full gap-[30px]">
-      <div className="relative w-[318px] h-[48px]">
-        {/* Track Background */}
-        <div className="absolute top-[5px] w-[318px] h-[38px] bg-white border border-black rounded-[21px]">
-          {/* Filled Rectangle */}
-          <div
-            className="absolute top-[1px] left-[1px] h-[36px] rounded-[20px] border-l border-black transition-all duration-200"
-            style={{
-              backgroundColor: colorHex,
-              width: `${(value / 100) * 315}px`,
-            }}
-          />
-        </div>
-
-        {/* Slider Handle */}
-        <div
-          className="absolute top-0 w-[48px] h-[48px] rounded-full border-[4px] border-black bg-white transition-all duration-200 cursor-pointer"
-          style={{
-            backgroundColor: colorHex,
-            left: `${(value / 100) * 270}px`,
-          }}
-        />
-
-        {/* Hidden range input for interaction */}
-        <input
-          type="range"
-          min={0}
+      <div className="relative w-[318px] h-[48px] flex items-center">
+        <Slider
+          value={[value]}
+          onValueChange={(values) => onChange(values[0])}
           max={100}
-          value={value}
-          onChange={(e) => onChange(parseInt(e.target.value))}
+          min={0}
+          step={1}
           disabled={disabled}
-          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+          className="w-full"
+          thumbColor={colorHex}
+          trackColor={colorHex}
         />
       </div>
 
       {/* Percentage Label */}
-      <div className="text-[22px] font-hartone leading-[16px] tracking-[7.5%] text-black text-right min-w-[40px]">
+      <div className="text-[22px] font-hartone leading-[16px] tracking-[7.5%] text-black text-right min-w-[40px] transition-colors duration-150">
         {value}%
       </div>
     </div>
