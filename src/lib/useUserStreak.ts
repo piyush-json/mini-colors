@@ -8,12 +8,11 @@ export function useUserStreak() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getUserId, isLoading: userLoading } = useMiniKitUser();
-
+  const userId = getUserId();
   useEffect(() => {
     const fetchStreak = async () => {
       if (userLoading) return;
 
-      const userId = getUserId();
       if (!userId || userId === "anonymous") {
         setStreak(0);
         setIsLoading(false);
@@ -43,7 +42,7 @@ export function useUserStreak() {
     };
 
     fetchStreak();
-  }, [getUserId, userLoading]);
+  }, [userLoading]);
 
   return { streak, isLoading, error };
 }

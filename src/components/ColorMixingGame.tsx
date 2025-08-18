@@ -81,6 +81,32 @@ export const ColorMixingGame = ({
     mode,
   });
 
+  // Local state for immediate visual feedback
+  const [localSliderValues, setLocalSliderValues] = useState({
+    color1: state.colorPercentages.color1.percentage,
+    color2: state.colorPercentages.color2.percentage,
+    distractor: state.colorPercentages.distractor.percentage,
+    white: state.colorPercentages.white,
+    black: state.colorPercentages.black,
+  });
+
+  // Update local state when game state changes (e.g., on reset)
+  useEffect(() => {
+    setLocalSliderValues({
+      color1: state.colorPercentages.color1.percentage,
+      color2: state.colorPercentages.color2.percentage,
+      distractor: state.colorPercentages.distractor.percentage,
+      white: state.colorPercentages.white,
+      black: state.colorPercentages.black,
+    });
+  }, [
+    state.colorPercentages.color1.percentage,
+    state.colorPercentages.color2.percentage,
+    state.colorPercentages.distractor.percentage,
+    state.colorPercentages.white,
+    state.colorPercentages.black,
+  ]);
+
   const gameContext = useGameContext();
 
   useEffect(() => {
@@ -168,7 +194,7 @@ export const ColorMixingGame = ({
           {/* Right half showing mixed color */}
           {targetColor && (
             <div
-              className="absolute right-0 top-0 w-1/2 h-full border-l border-black"
+              className="absolute right-0 top-0 w-1/2 h-full   border border-black rounded-r-[12px] "
               style={{ backgroundColor: mixedColorHex }}
             />
           )}
@@ -191,8 +217,11 @@ export const ColorMixingGame = ({
       <div className="flex flex-col gap-3 w-full">
         {/* Primary Color 1 */}
         <ColorSlider
-          value={state.colorPercentages.color1.percentage}
-          onChange={(value) => handleSliderChange("color1", value)}
+          value={localSliderValues.color1}
+          onChange={(value) => {
+            setLocalSliderValues((prev) => ({ ...prev, color1: value }));
+            handleSliderChange("color1", value);
+          }}
           colorHex={getColorHex(
             state.colorPercentages.color1.color.r,
             state.colorPercentages.color1.color.g,
@@ -203,8 +232,11 @@ export const ColorMixingGame = ({
 
         {/* Primary Color 2 */}
         <ColorSlider
-          value={state.colorPercentages.color2.percentage}
-          onChange={(value) => handleSliderChange("color2", value)}
+          value={localSliderValues.color2}
+          onChange={(value) => {
+            setLocalSliderValues((prev) => ({ ...prev, color2: value }));
+            handleSliderChange("color2", value);
+          }}
           colorHex={getColorHex(
             state.colorPercentages.color2.color.r,
             state.colorPercentages.color2.color.g,
@@ -215,8 +247,11 @@ export const ColorMixingGame = ({
 
         {/* Distractor Color */}
         <ColorSlider
-          value={state.colorPercentages.distractor.percentage}
-          onChange={(value) => handleSliderChange("distractor", value)}
+          value={localSliderValues.distractor}
+          onChange={(value) => {
+            setLocalSliderValues((prev) => ({ ...prev, distractor: value }));
+            handleSliderChange("distractor", value);
+          }}
           colorHex={getColorHex(
             state.colorPercentages.distractor.color.r,
             state.colorPercentages.distractor.color.g,
@@ -227,16 +262,22 @@ export const ColorMixingGame = ({
 
         {/* White Shading */}
         <ColorSlider
-          value={state.colorPercentages.white}
-          onChange={(value) => handleShadingChange("white", value)}
+          value={localSliderValues.white}
+          onChange={(value) => {
+            setLocalSliderValues((prev) => ({ ...prev, white: value }));
+            handleShadingChange("white", value);
+          }}
           colorHex="#FFFFFF"
           disabled={disabled}
         />
 
         {/* Black Shading */}
         <ColorSlider
-          value={state.colorPercentages.black}
-          onChange={(value) => handleShadingChange("black", value)}
+          value={localSliderValues.black}
+          onChange={(value) => {
+            setLocalSliderValues((prev) => ({ ...prev, black: value }));
+            handleShadingChange("black", value);
+          }}
           colorHex="#000000"
           disabled={disabled}
         />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShareMintScreen } from "@/components/ShareMintScreen";
+import { SuccessDialog } from "@/components/SuccessDialog";
 import { useGameResults } from "@/lib/GameResultsContext";
 import { useComposeCast, useMiniKit } from "@coinbase/onchainkit/minikit";
 import html2canvas from "html2canvas";
@@ -18,6 +19,7 @@ export default function ResultsPage() {
   const { composeCastAsync: composeCast } = useComposeCast();
   const { getUserName } = useMiniKitUser();
   const { mint, isPending: isMinting, address } = useMintNFT();
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   useEffect(() => {
     if (!results) {
@@ -73,6 +75,11 @@ export default function ResultsPage() {
   const handleMint = async () => {
     try {
       console.log("Mint button clicked");
+      // CHECK IF user is connected
+      if (!address) {
+        alert("Please connect your wallet to mint an NFT.");
+        return;
+      }
 
       // Find the mintit div specifically
       const mintitElement = document.getElementById("mintit");
@@ -141,6 +148,9 @@ export default function ResultsPage() {
 
       // Mint NFT
       await mint(metadataUri, getMintCost());
+
+      // Show success dialog after successful mint
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error("Error minting NFT:", error);
       alert("Failed to mint NFT. Please try again.");
@@ -155,7 +165,12 @@ export default function ResultsPage() {
   const handleAttemptAgain = () => {
     clearResults();
     setGameMode("practice");
+    console.log("Attempting again, switching to practice mode");
     router.push("/game");
+  };
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
   };
 
   // Convert colors to hex format for consistent display
@@ -180,6 +195,13 @@ export default function ResultsPage() {
         onContinue={handleContinue}
         onAttemptAgain={handleAttemptAgain}
         isMinting={isMinting}
+      />
+
+      <SuccessDialog
+        isOpen={showSuccessDialog}
+        onClose={handleSuccessDialogClose}
+        title="NFT Minted!"
+        description="Your color game result has been successfully minted as an NFT! You can view it in your wallet."
       />
     </div>
   );

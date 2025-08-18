@@ -170,8 +170,27 @@ export class ColorSDK {
     endTime: number,
   ): ColorMatch {
     const timeTaken = (endTime - startTime) / 1000; // in seconds
-    const deltaE = this.calculateColorSimilarity(targetColor, capturedColor);
 
+    // Convert colors to RGB objects for DeltaE calculation
+    const targetRgb = this.parseColor(targetColor);
+    const capturedRgb = this.parseColor(capturedColor);
+
+    if (!targetRgb || !capturedRgb) {
+      // Fallback to RGB distance if color parsing fails
+      const deltaE = this.calculateColorSimilarity(targetColor, capturedColor);
+      const matchPercentage = calculatePercentageMatch(deltaE);
+
+      return {
+        targetColor,
+        capturedColor,
+        similarity: Math.round(matchPercentage),
+        finalScore: Math.round(matchPercentage),
+        timeTaken: Math.round(timeTaken * 100) / 100,
+      };
+    }
+
+    // Use exact same calculation as color mixing game
+    const deltaE = calculateDeltaE(targetRgb, capturedRgb);
     const matchPercentage = calculatePercentageMatch(deltaE);
 
     // Score is purely based on color similarity, no time factor

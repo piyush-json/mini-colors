@@ -2,6 +2,24 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ColorMixingSDK, ColorMixingState } from "./mix-sdk";
 import { useMiniKitUser } from "./useMiniKitUser";
 
+// Debounce utility function
+function useDebounce<T extends any[]>(
+  func: (...args: T) => void,
+  delay: number,
+) {
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  return useCallback(
+    (...args: T) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => func(...args), delay);
+    },
+    [func, delay],
+  );
+}
+
 interface UseColorMixingGameOptions {
   isMultiplayer?: boolean;
   targetColor?: string;
@@ -107,6 +125,10 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     [sdk],
   );
 
+  // Debounced versions of the handlers for smoother performance
+  const debouncedSliderChange = useDebounce(handleSliderChange, 2);
+  const debouncedShadingChange = useDebounce(handleShadingChange, 2);
+
   const handleMix = useCallback(async () => {
     console.log("Handling mix...");
     const attempt = sdk.submitMix();
@@ -185,8 +207,8 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     stats,
     scoreCategory,
 
-    handleSliderChange,
-    handleShadingChange,
+    handleSliderChange: debouncedSliderChange,
+    handleShadingChange: debouncedShadingChange,
     handleMix,
     handleReset,
     handleNewChallenge,
