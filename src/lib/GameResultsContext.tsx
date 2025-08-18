@@ -55,7 +55,7 @@ export const GameResultsProvider = ({ children }: GameResultsProviderProps) => {
   const [currentMode, setCurrentMode] = useState<"daily" | "practice">(
     "practice",
   );
-  const [gameType, setGameType] = useState<"upload" | "mixing">("upload");
+  const [gameType, setGameType] = useState<"upload" | "mixing">("mixing");
   const [results, setResults] = useState<GameResults | null>(null);
 
   // Daily color state
