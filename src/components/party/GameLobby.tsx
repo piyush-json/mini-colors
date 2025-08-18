@@ -1,9 +1,10 @@
 "use client";
 
+import { GameInfo } from "@/lib/useSocketIO";
 import { QRCodeSVG } from "qrcode.react";
 
 interface GameLobbyProps {
-  gameInfo: any;
+  gameInfo: GameInfo;
   isCurrentUserDenner: boolean;
   onSelectGameType: (gameType: "findColor" | "colorMixing") => void;
   currentRoom: string;
@@ -46,7 +47,9 @@ export const GameLobby = ({
         )}
 
         <div className="font-sintony text-[16px] text-black">
-          Waiting for denner {gameInfo.dennerName} to select game type
+          {isCurrentUserDenner
+            ? "Select a game type to start Round 1"
+            : `Waiting for denner ${gameInfo.dennerName} to select game type`}
         </div>
       </div>
 
@@ -137,7 +140,7 @@ export const GameLobby = ({
                   {player.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="font-sintony text-[14px] text-black">
-                  {player.name} {player.id === gameInfo.hostId && "👑"}
+                  {player.name} {player.id === gameInfo.dennerId && "👑"}
                 </span>
               </div>
             ))}

@@ -11,6 +11,9 @@ import { GameLobby } from "./GameLobby";
 import { RoundFinishedScreen } from "./RoundFinishedScreen";
 import { SessionFinishedScreen } from "./SessionFinishedScreen";
 import { GameSelectionScreen } from "./GameSelectionScreen";
+import { RoundTransitionDialog } from "./RoundTransitionDialog";
+import { GameSelectionDialog } from "./GameSelectionDialog";
+import { LobbyDialog } from "./LobbyDialog";
 import { TimerDisplay } from "@/lib/timer-utils";
 
 export const MultiplayerPartyScreen = () => {
@@ -20,6 +23,12 @@ export const MultiplayerPartyScreen = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // New dialog states
+  const [showRoundTransitionDialog, setShowRoundTransitionDialog] =
+    useState(false);
+  const [showGameSelectionDialog, setShowGameSelectionDialog] = useState(false);
+  const [showLobbyDialog, setShowLobbyDialog] = useState(false);
 
   // Room configuration state
   const [maxPlayers, setMaxPlayers] = useState<number>(4);
@@ -53,14 +62,53 @@ export const MultiplayerPartyScreen = () => {
     setTargetColor,
     clearEvents,
     clearError,
+    isCurrentUserDenner,
   } = useSocket();
 
-  const isCurrentUserDenner =
-    gameInfo?.hostId ===
-    gameInfo?.players?.find((p) => p.name === playerName)?.id;
+  const isUserDenner = isCurrentUserDenner();
+
+  // Helper function to get the correct round number for dialog
+  const getDialogRoundNumber = () => {
+    if (!gameInfo) return 1;
+    // For lobby state (first round), show round 1
+    if (gameInfo.gameState === "lobby" || gameInfo.currentRound === 0) return 1;
+    // For transitions between rounds, show next round
+    return gameInfo.currentRound + 1;
+  };
+
+  // Auto-show lobby dialog when in lobby state
+  useEffect(() => {
+    if (gameInfo?.gameState === "lobby") {
+      setShowLobbyDialog(true);
+    }
+  }, [gameInfo?.gameState]);
+
+  // Also handle the transition back to lobby after rounds
+  useEffect(() => {
+    if (events && events.length > 0) {
+      const latestEvent = events[events.length - 1];
+      if (
+        latestEvent.type === "dennerChanged" &&
+        gameInfo?.gameState === "lobby"
+      ) {
+        setShowLobbyDialog(true);
+      }
+    }
+  }, [events, gameInfo?.gameState]);
 
   useEffect(() => {
     connect();
+
+    const retryConnection = () => {
+      if (!isConnected) {
+        console.log("Retrying socket connection...");
+        connect();
+      }
+    };
+
+    const retryTimer = setTimeout(retryConnection, 1000);
+
+    return () => clearTimeout(retryTimer);
   }, [connect, isConnected]);
 
   // Handle socket events for notifications
@@ -83,9 +131,16 @@ export const MultiplayerPartyScreen = () => {
           );
           break;
 
+        case "roomJoined":
         case "playerJoined":
+          // Show lobby dialog when joining or when a player joins
+          if (gameInfo?.gameState === "lobby") {
+            setShowLobbyDialog(true);
+          }
           const joinData = latestEvent.data as any;
-          console.log(`👋 ${joinData.playerName} joined the room`);
+          console.log(
+            `👋 ${joinData.playerName || "A player"} joined the room`,
+          );
           break;
 
         case "playerLeft":
@@ -99,17 +154,23 @@ export const MultiplayerPartyScreen = () => {
 
         case "roundFinished":
           console.log(`🏁 Round finished`);
+          // Show round transition dialog for round 1 or when user is denner
+          if (gameInfo?.currentRound === 1 || isUserDenner) {
+            setShowRoundTransitionDialog(true);
+          }
           break;
-          
+
         case "timeExtended":
           const timeData = latestEvent.data as any;
-          console.log(`⏰ Time extended by ${timeData.additionalSeconds} seconds`);
+          console.log(
+            `⏰ Time extended by ${timeData.additionalSeconds} seconds`,
+          );
           // Extend the local timer
           setTimeLeft((prev) => (prev || 0) + timeData.additionalSeconds);
           break;
       }
     }
-  }, [events]);
+  }, [events, gameInfo?.currentRound, gameInfo?.gameState, isUserDenner]);
 
   // Timer effect for game countdown
   useEffect(() => {
@@ -125,7 +186,7 @@ export const MultiplayerPartyScreen = () => {
             clearInterval(interval);
             // Timer expired - auto-submit score of 0
             if (currentRoom) {
-              submitScore(currentRoom, 0, gameInfo.guessTime);
+              submitScore(currentRoom, 0, gameInfo.currentGuessTime);
             }
             return 0;
           }
@@ -146,6 +207,7 @@ export const MultiplayerPartyScreen = () => {
         guessTime,
       });
       setShowCreateForm(false);
+      setShowLobbyDialog(true);
     }
   };
 
@@ -153,25 +215,52 @@ export const MultiplayerPartyScreen = () => {
     if (playerName.trim() && roomId.trim()) {
       joinRoom(roomId, playerName);
       setShowJoinForm(false);
+      setShowLobbyDialog(true);
     }
   };
 
   const handleGameTypeSelect = (gameType: "mix" | "find") => {
     if (currentRoom) {
-      const socketGameType = gameType === "mix" ? "colorMixing" : "findColor";
-      selectGameType(currentRoom, socketGameType);
+      // For the first round in lobby, open the game selection dialog
+      if (gameInfo?.gameState === "lobby") {
+        setShowGameSelectionDialog(true);
+      } else {
+        // For other rounds, proceed directly
+        const socketGameType = gameType === "mix" ? "colorMixing" : "findColor";
+        selectGameType(currentRoom, socketGameType);
+      }
     }
   };
 
   const handleContinueSession = () => {
-    if (isCurrentUserDenner && currentRoom) {
-      continueSession(currentRoom);
+    if (isUserDenner && currentRoom) {
+      setShowRoundTransitionDialog(false);
+      setShowGameSelectionDialog(true);
     }
   };
 
-  const handleNewSession = () => {
-    if (isCurrentUserDenner && currentRoom) {
+  const handleMoveToNext = () => {
+    if (isUserDenner && currentRoom) {
+      continueSession(currentRoom);
+      setShowRoundTransitionDialog(false);
+      setShowGameSelectionDialog(true);
+    }
+  };
+
+  const handleDismissGame = () => {
+    if (isUserDenner && currentRoom) {
       endSession(currentRoom);
+      setShowRoundTransitionDialog(false);
+    }
+  };
+
+  const handleGameTypeSelectFromDialog = (
+    gameType: "findColor" | "colorMixing",
+  ) => {
+    if (currentRoom) {
+      selectGameType(currentRoom, gameType);
+      startRound(currentRoom);
+      setShowGameSelectionDialog(false);
     }
   };
 
@@ -184,6 +273,9 @@ export const MultiplayerPartyScreen = () => {
     setShowQRCode(false);
     setShowLeaderboard(false);
     setShowFinalLeaderboard(false);
+    setShowRoundTransitionDialog(false);
+    setShowGameSelectionDialog(false);
+    setShowLobbyDialog(false);
   };
 
   const getRoomShareUrl = () => {
@@ -255,150 +347,246 @@ export const MultiplayerPartyScreen = () => {
 
   // Game states
   if (gameInfo) {
-    // Lobby state - waiting for game to start
+    // For lobby state, show lobby dialog on a simple background
     if (gameInfo.gameState === "lobby") {
       return (
-        <GameLobby
-          gameInfo={gameInfo}
-          isCurrentUserDenner={isCurrentUserDenner}
-          showQRCode={showQRCode}
-          setShowQRCode={setShowQRCode}
-          getRoomShareUrl={getRoomShareUrl}
-          onSelectGameType={(gameType) => {
-            if (currentRoom) {
-              selectGameType(currentRoom, gameType);
-              startRound(currentRoom);
-            }
-          }}
-          currentRoom={currentRoom || ""}
-        />
+        <>
+          <div className="min-h-screen bg-[#FFFFE7] flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="font-hartone text-[32px] text-black mb-4">
+                Room: {gameInfo.roomId}
+              </h1>
+              <p className="font-sintony text-[16px] text-black">
+                Setting up the game...
+              </p>
+            </div>
+          </div>
+
+          {/* Lobby Dialog */}
+          <LobbyDialog
+            isOpen={showLobbyDialog}
+            onClose={() => {}}
+            gameInfo={gameInfo}
+            isCurrentUserDenner={isUserDenner}
+            onStartNextRound={() => {
+              setShowLobbyDialog(false);
+              setShowGameSelectionDialog(true);
+            }}
+            onEndSession={() => {
+              if (currentRoom) {
+                endSession(currentRoom);
+                setShowLobbyDialog(false);
+              }
+            }}
+            showQRCode={showQRCode}
+            setShowQRCode={setShowQRCode}
+            getRoomShareUrl={getRoomShareUrl}
+          />
+
+          {/* Game Selection Dialog */}
+          {isUserDenner && (
+            <GameSelectionDialog
+              isOpen={showGameSelectionDialog}
+              onClose={() => {}}
+              roundNumber={getDialogRoundNumber()}
+              onGameTypeSelect={handleGameTypeSelectFromDialog}
+              onInvitePlayers={() => setShowQRCode(true)}
+            />
+          )}
+        </>
       );
     }
 
-    // Game selection state (between rounds)
+    // Game selection state (between rounds) - show on simple background
     if (gameInfo.gameState === "gameSelection") {
       return (
-        <GameSelectionScreen
-          gameInfo={gameInfo}
-          isCurrentUserDenner={isCurrentUserDenner}
-          onGameTypeSelect={handleGameTypeSelect}
-        />
+        <>
+          <div className="min-h-screen bg-[#FFFFE7] flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="font-hartone text-[32px] text-black mb-4">
+                Room: {gameInfo.roomId}
+              </h1>
+              <p className="font-sintony text-[16px] text-black">
+                Selecting game type...
+              </p>
+            </div>
+          </div>
+
+          <GameSelectionScreen
+            gameInfo={gameInfo}
+            isCurrentUserDenner={isUserDenner}
+            onGameTypeSelect={handleGameTypeSelect}
+          />
+        </>
       );
     }
 
-    // Playing state
+    // Playing state - main game screen with timer
     if (gameInfo.gameState === "playing") {
       return (
-        <div className="min-h-screen bg-[#FFFFE7] p-4">
-          <div className="max-w-lg mx-auto pt-4">
-            {/* Timer display */}
-            {timeLeft !== null && (
-              <div className="text-center mb-6">
-                <TimerDisplay
-                  timeLeft={timeLeft}
-                  totalTime={gameInfo?.guessTime || 30}
-                  urgencyLevel={
-                    timeLeft <= 10
-                      ? "critical"
-                      : timeLeft <= 30
-                        ? "warning"
-                        : "normal"
-                  }
-                  showProgress={true}
-                  showUrgencyMessage={true}
-                />
-
-                {/* Denner timer controls */}
-                {isCurrentUserDenner && timeLeft > 0 && (
-                  <div className="mt-4 flex justify-center gap-2">
-                    <button
-                      onClick={() => {
-                        // Extend time for all players via server
-                        if (currentRoom) {
-                          extendTime(currentRoom, 30);
-                        }
-                      }}
-                      className="px-4 py-2 bg-blue-500 text-white border border-black rounded-lg shadow-[0px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[0px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] active:shadow-none active:translate-y-[2px] font-sintony text-[14px] transition-all duration-150"
-                    >
-                      +30s
-                    </button>
-                    <span className="px-2 py-2 font-sintony text-[12px] text-gray-600 flex items-center">
-                      Denner controls
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Game component */}
-            {gameInfo.gameType === "findColor" ? (
-              <FindColorGame
-                timeLimit={gameInfo.guessTime}
-                onScoreSubmit={(score, timeTaken) => {
-                  if (currentRoom) {
-                    submitScore(currentRoom, score, timeTaken);
-                  }
-                }}
-              />
-            ) : (
-              <ColorMixingGame
-                timeLimit={gameInfo.guessTime}
-                onScoreSubmit={(score, timeTaken) => {
-                  if (currentRoom) {
-                    submitScore(currentRoom, score, timeTaken);
-                  }
-                }}
-              />
-            )}
+        <div className="min-h-screen bg-[#FFFFE7] w-full pb-8">
+          {/* Room info header */}
+          <div className="text-center mb-4">
+            <h1 className="font-hartone text-[20px] text-black">
+              Room: {gameInfo.roomId} • Round {gameInfo.currentRound}
+            </h1>
           </div>
+
+          {/* Timer display */}
+          {timeLeft !== null && (
+            <div className="text-center mb-6 flex gap-6 items-center">
+              <TimerDisplay
+                timeLeft={timeLeft}
+                totalTime={gameInfo?.currentGuessTime || 30}
+                urgencyLevel={
+                  timeLeft <= 10
+                    ? "critical"
+                    : timeLeft <= 30
+                      ? "warning"
+                      : "normal"
+                }
+                showProgress={true}
+                showUrgencyMessage={true}
+              />
+
+              {/* Denner timer controls */}
+              {isUserDenner && timeLeft > 0 && (
+                <div className="flex flex-col justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (currentRoom) {
+                        extendTime(currentRoom, 30);
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-500 text-white border border-black rounded-lg shadow-[0px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[0px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] active:shadow-none active:translate-y-[2px] font-sintony text-[14px] transition-all duration-150"
+                  >
+                    +30s
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Game component */}
+          {gameInfo.gameType === "findColor" ? (
+            <FindColorGame
+              targetColor={gameInfo.targetColor}
+              timeLimit={gameInfo.guessTime}
+              onScoreSubmit={(score, timeTaken) => {
+                if (currentRoom) {
+                  submitScore(currentRoom, score, timeTaken);
+                }
+              }}
+            />
+          ) : (
+            <ColorMixingGame
+              targetColor={gameInfo.targetColor}
+              timeLimit={gameInfo.guessTime}
+              onScoreSubmit={(score, timeTaken) => {
+                if (currentRoom) {
+                  submitScore(currentRoom, score, timeTaken);
+                }
+              }}
+            />
+          )}
         </div>
       );
     }
 
-    // Round finished state
+    // Round finished state - simple background with dialogs
     if (gameInfo.gameState === "roundFinished") {
       return (
-        <div className="min-h-screen bg-[#FFFFE7] p-4">
-          <div className="max-w-lg mx-auto pt-8">
-            <RoundFinishedScreen
-              gameInfo={gameInfo}
-              isCurrentUserDenner={isCurrentUserDenner}
-              onContinueSession={handleContinueSession}
-              onEndSession={handleNewSession}
-              showLeaderboard={showLeaderboard}
-              setShowLeaderboard={setShowLeaderboard}
-            />
+        <>
+          <div className="min-h-screen bg-[#FFFFE7] flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="font-hartone text-[32px] text-black mb-4">
+                Round {gameInfo.currentRound} Complete!
+              </h1>
+              <p className="font-sintony text-[16px] text-black">
+                Reviewing results...
+              </p>
+            </div>
           </div>
-        </div>
+
+          {/* Round Transition Dialog */}
+          <RoundTransitionDialog
+            isOpen={showRoundTransitionDialog}
+            onClose={() => setShowRoundTransitionDialog(false)}
+            gameInfo={gameInfo}
+            isCurrentUserDenner={isUserDenner}
+            onMoveToNext={handleMoveToNext}
+            onDismissGame={handleDismissGame}
+          />
+
+          {/* Game Selection Dialog */}
+          <GameSelectionDialog
+            isOpen={showGameSelectionDialog}
+            onClose={() => setShowGameSelectionDialog(false)}
+            roundNumber={getDialogRoundNumber()}
+            onGameTypeSelect={handleGameTypeSelectFromDialog}
+            onInvitePlayers={() => setShowQRCode(true)}
+          />
+        </>
       );
     }
 
-    // Session finished state
+    // Session finished state - simple background with dialogs
     if (gameInfo.gameState === "sessionFinished") {
       return (
-        <div className="min-h-screen bg-[#FFFFE7] p-4">
-          <div className="max-w-lg mx-auto pt-8">
-            <SessionFinishedScreen
-              gameInfo={gameInfo}
-              isCurrentUserDenner={isCurrentUserDenner}
-              onNewSession={handleNewSession}
-              onBackToLanding={handleBackToLanding}
-              showFinalLeaderboard={showFinalLeaderboard}
-              setShowFinalLeaderboard={setShowFinalLeaderboard}
-            />
+        <>
+          <div className=" bg-[#FFFFE7] flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="font-hartone text-[32px] text-black mb-4">
+                Game Complete!
+              </h1>
+              <p className="font-sintony text-[16px] text-black">
+                Final results ready...
+              </p>
+            </div>
           </div>
-        </div>
+
+          <SessionFinishedScreen
+            gameInfo={gameInfo}
+            isCurrentUserDenner={isUserDenner}
+            onBackToLanding={handleBackToLanding}
+            showFinalLeaderboard={showFinalLeaderboard}
+            setShowFinalLeaderboard={setShowFinalLeaderboard}
+          />
+        </>
       );
     }
   }
 
-  // Fallback
+  // Fallback with dialogs
   return (
-    <div className="min-h-screen bg-[#FFFFE7] p-4 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 mx-auto mb-4 border-2 border-black rounded-full border-t-transparent animate-spin"></div>
-        <p className="font-sintony text-[16px] text-black">Connecting...</p>
+    <>
+      <div className="min-h-screen bg-[#FFFFE7] p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 border-2 border-black rounded-full border-t-transparent animate-spin"></div>
+          <p className="font-sintony text-[16px] text-black">Connecting...</p>
+        </div>
       </div>
-    </div>
+
+      {/* Round Transition Dialog */}
+      {gameInfo && (
+        <RoundTransitionDialog
+          isOpen={showRoundTransitionDialog}
+          onClose={() => setShowRoundTransitionDialog(false)}
+          gameInfo={gameInfo}
+          isCurrentUserDenner={isUserDenner}
+          onMoveToNext={handleMoveToNext}
+          onDismissGame={handleDismissGame}
+        />
+      )}
+
+      {/* Game Selection Dialog */}
+      <GameSelectionDialog
+        isOpen={showGameSelectionDialog}
+        onClose={() => setShowGameSelectionDialog(false)}
+        roundNumber={getDialogRoundNumber()}
+        onGameTypeSelect={handleGameTypeSelectFromDialog}
+        onInvitePlayers={() => setShowQRCode(true)}
+      />
+    </>
   );
 };

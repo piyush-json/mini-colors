@@ -27,9 +27,9 @@ const playerSessions = new Map();
 
 // Game state management
 class GameRoom {
-  constructor(roomId, hostId, targetColor, options = {}) {
+  constructor(roomId, creatorId, targetColor, options = {}) {
     this.roomId = roomId;
-    this.hostId = hostId; // Current denner/host
+    this.dennerId = creatorId; // Current denner (rotates)
     this.targetColor = targetColor;
     this.players = new Map();
     this.gameState = "lobby"; // lobby, gameSelection, playing, roundFinished, sessionFinished
@@ -37,6 +37,7 @@ class GameRoom {
     this.currentRound = 0;
     this.maxRounds = options.maxRounds || 3; // Configurable rounds per session
     this.guessTime = options.guessTime || 30; // Time limit per guess in seconds
+    this.currentGuessTime = options.guessTime || 30; // Current round time, can be extended
     this.startTime = null;
     this.endTime = null;
     this.roundResults = [];
@@ -95,8 +96,8 @@ class GameRoom {
     }
 
     // If current denner leaves, assign new denner
-    if (playerId === this.hostId && this.dennerRotation.length > 0) {
-      this.hostId = this.dennerRotation[0];
+    if (playerId === this.dennerId && this.dennerRotation.length > 0) {
+      this.dennerId = this.dennerRotation[0];
     }
 
     // Close room if no players left
@@ -110,9 +111,9 @@ class GameRoom {
   rotateDenner() {
     if (this.dennerRotation.length <= 1) return;
 
-    const currentIndex = this.dennerRotation.indexOf(this.hostId);
+    const currentIndex = this.dennerRotation.indexOf(this.dennerId);
     const nextIndex = (currentIndex + 1) % this.dennerRotation.length;
-    this.hostId = this.dennerRotation[nextIndex];
+    this.dennerId = this.dennerRotation[nextIndex];
   }
 
   selectGameType(gameType) {
@@ -130,6 +131,7 @@ class GameRoom {
     this.startTime = Date.now();
     this.endTime = null;
     this.currentRound++;
+    this.currentGuessTime = this.guessTime; // Reset to original time for new round
 
     this.targetColor = generateRandomColor();
 
@@ -150,7 +152,7 @@ class GameRoom {
     const roundResult = {
       round: this.currentRound,
       gameType: this.gameType,
-      denner: this.hostId,
+      denner: this.dennerId,
       players: Array.from(this.players.values()).map((p) => ({
         id: p.id,
         name: p.name,
@@ -209,14 +211,15 @@ class GameRoom {
   getGameInfo() {
     return {
       roomId: this.roomId,
-      hostId: this.hostId,
-      dennerName: this.players.get(this.hostId)?.name || "Unknown",
+      dennerId: this.dennerId,
+      dennerName: this.players.get(this.dennerId)?.name || "Unknown",
       targetColor: this.targetColor,
       gameState: this.gameState,
       gameType: this.gameType,
       currentRound: this.currentRound,
       maxRounds: this.maxRounds,
       guessTime: this.guessTime,
+      currentGuessTime: this.currentGuessTime,
       startTime: this.startTime,
       endTime: this.endTime,
       playerCount: this.players.size,
@@ -312,7 +315,7 @@ io.on("connection", (socket) => {
   socket.on("selectGameType", ({ roomId, gameType }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", { message: "Only the denner can select game type" });
       return;
     }
@@ -343,7 +346,7 @@ io.on("connection", (socket) => {
   socket.on("startRound", ({ roomId }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", { message: "Only the denner can start the round" });
       return;
     }
@@ -368,7 +371,7 @@ io.on("connection", (socket) => {
   socket.on("endRound", ({ roomId }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", { message: "Only the denner can end the round" });
       return;
     }
@@ -387,7 +390,7 @@ io.on("connection", (socket) => {
   socket.on("continueSession", ({ roomId }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", { message: "Only the denner can continue session" });
       return;
     }
@@ -406,13 +409,13 @@ io.on("connection", (socket) => {
 
     // Notify all players of denner change and lobby state
     io.to(roomId).emit("dennerChanged", {
-      newDenner: game.hostId,
-      dennerName: game.players.get(game.hostId)?.name,
+      newDenner: game.dennerId,
+      dennerName: game.players.get(game.dennerId)?.name,
       gameInfo: game.getGameInfo(),
     });
 
     console.log(
-      `Session continues in room ${roomId}, new denner: ${game.hostId}`,
+      `Session continues in room ${roomId}, new denner: ${game.dennerId}`,
     );
   });
 
@@ -420,7 +423,7 @@ io.on("connection", (socket) => {
   socket.on("endSession", ({ roomId }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", { message: "Only the denner can end the session" });
       return;
     }
@@ -486,7 +489,7 @@ io.on("connection", (socket) => {
   socket.on("extendTime", ({ roomId, additionalSeconds }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", { message: "Only the denner can extend time" });
       return;
     }
@@ -498,14 +501,18 @@ io.on("connection", (socket) => {
       return;
     }
 
+    // Add time to current guess time
+    const extension = additionalSeconds || 30;
+    game.currentGuessTime += extension;
+
     // Notify all players of time extension
     io.to(roomId).emit("timeExtended", {
-      additionalSeconds: additionalSeconds || 30,
+      additionalSeconds: extension,
       gameInfo: game.getGameInfo(),
     });
 
     console.log(
-      `Time extended by ${additionalSeconds || 30} seconds in room ${roomId}`,
+      `Time extended by ${extension} seconds in room ${roomId}. New currentGuessTime: ${game.currentGuessTime}`,
     );
   });
 
@@ -513,9 +520,9 @@ io.on("connection", (socket) => {
   socket.on("setTargetColor", ({ roomId, targetColor }) => {
     const game = activeGames.get(roomId);
 
-    if (!game || game.hostId !== socket.id) {
+    if (!game || game.dennerId !== socket.id) {
       socket.emit("error", {
-        message: "Only the host can change the target color",
+        message: "Only the denner can change the target color",
       });
       return;
     }
@@ -555,7 +562,8 @@ io.on("connection", (socket) => {
     const game = activeGames.get(roomId);
 
     if (game) {
-      const wasHost = game.hostId === socket.id;
+      const wasDenner = game.dennerId === socket.id;
+      const oldDennerId = game.dennerId;
       const shouldCloseRoom = game.removePlayer(socket.id);
 
       if (shouldCloseRoom) {
@@ -563,20 +571,24 @@ io.on("connection", (socket) => {
         console.log(`Room ${roomId} closed (no players left)`);
       } else {
         // Check if denner changed and notify players
-        if (wasHost && game.players.size > 0) {
-          const newDenner = game.hostId;
-          const newDennerName = game.players.get(newDenner)?.name || "Unknown";
+        if (
+          wasDenner &&
+          game.players.size > 0 &&
+          game.dennerId !== oldDennerId
+        ) {
+          const newDennerName =
+            game.players.get(game.dennerId)?.name || "Unknown";
 
           console.log(
-            `Denner changed in room ${roomId}: ${socket.id} -> ${newDenner}`,
+            `Denner changed in room ${roomId}: ${socket.id} -> ${game.dennerId}`,
           );
 
           // Notify remaining players of denner change
           io.to(roomId).emit("dennerChanged", {
-            newDenner: newDenner,
+            newDenner: game.dennerId,
             dennerName: newDennerName,
             gameInfo: game.getGameInfo(),
-            reason: "hostLeft",
+            reason: "dennerLeft",
           });
         }
 
@@ -604,7 +616,8 @@ io.on("connection", (socket) => {
       const game = activeGames.get(roomId);
 
       if (game) {
-        const wasHost = game.hostId === socket.id;
+        const wasDenner = game.dennerId === socket.id;
+        const oldDennerId = game.dennerId;
         const shouldCloseRoom = game.removePlayer(socket.id);
 
         if (shouldCloseRoom) {
@@ -612,21 +625,24 @@ io.on("connection", (socket) => {
           console.log(`Room ${roomId} closed (no players left)`);
         } else {
           // Check if denner changed and notify players
-          if (wasHost && game.players.size > 0) {
-            const newDenner = game.hostId;
+          if (
+            wasDenner &&
+            game.players.size > 0 &&
+            game.dennerId !== oldDennerId
+          ) {
             const newDennerName =
-              game.players.get(newDenner)?.name || "Unknown";
+              game.players.get(game.dennerId)?.name || "Unknown";
 
             console.log(
-              `Denner changed in room ${roomId}: ${socket.id} -> ${newDenner}`,
+              `Denner changed in room ${roomId}: ${socket.id} -> ${game.dennerId}`,
             );
 
             // Notify remaining players of denner change
             io.to(roomId).emit("dennerChanged", {
-              newDenner: newDenner,
+              newDenner: game.dennerId,
               dennerName: newDennerName,
               gameInfo: game.getGameInfo(),
-              reason: "hostDisconnected",
+              reason: "dennerDisconnected",
             });
           }
 

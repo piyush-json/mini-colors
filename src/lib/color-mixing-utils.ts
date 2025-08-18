@@ -374,3 +374,38 @@ export function hexToRgb(hex: string) {
       }
     : null;
 }
+
+export function rgbOrHslToHex(color: `rgb${string}` | `hsl${string}`): string {
+  if (color.startsWith("rgb")) {
+    // Parse RGB values from rgb(r, g, b) or rgba(r, g, b, a) format
+    const match = color.match(
+      /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
+    );
+    if (!match) {
+      throw new Error(`Invalid RGB color format: ${color}`);
+    }
+
+    const r = parseInt(match[1], 10);
+    const g = parseInt(match[2], 10);
+    const b = parseInt(match[3], 10);
+
+    return rgbToHex(r, g, b);
+  } else if (color.startsWith("hsl")) {
+    // Parse HSL values from hsl(h, s%, l%) or hsla(h, s%, l%, a) format
+    const match = color.match(
+      /hsla?\((\d+),\s*(\d+)%,\s*(\d+)%(?:,\s*[\d.]+)?\)/,
+    );
+    if (!match) {
+      throw new Error(`Invalid HSL color format: ${color}`);
+    }
+
+    const h = parseInt(match[1], 10);
+    const s = parseInt(match[2], 10);
+    const l = parseInt(match[3], 10);
+
+    const rgb = hslToRgb(h, s, l);
+    return rgbToHex(rgb.r, rgb.g, rgb.b);
+  } else {
+    throw new Error(`Unsupported color format: ${color}`);
+  }
+}

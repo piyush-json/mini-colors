@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { useMiniKitUser } from "@/lib/useMiniKitUser";
 
 interface JoinRoomFormProps {
   playerName: string;
@@ -19,12 +21,23 @@ export const JoinRoomForm = ({
   setRoomId,
   onJoinRoom,
   onBack,
-}: JoinRoomFormProps) => (
-  <div className="min-h-screen bg-[#FFFFE7] p-4 font-mono">
-    <div className="w-full pt-8">
+}: JoinRoomFormProps) => {
+  const { getUserName } = useMiniKitUser();
+
+  useEffect(() => {
+    if (!playerName.trim()) {
+      const defaultName = getUserName();
+      if (defaultName && defaultName !== "Anonymous") {
+        setPlayerName(defaultName);
+      }
+    }
+  }, [playerName, setPlayerName, getUserName]);
+
+  return (
+    <div className="grow flex flex-col items-center bg-[#FFFFE7] pb-8 gap-6 font-mono w-full">
       {/* Header */}
       <div className="text-center mb-16">
-        <h1 className="font-hartone text-[39px] leading-[42px] text-black mb-2">
+        <h1 className="font-hartone  font-extralight text-[39px] leading-[42px] text-black mb-2">
           JOIN ROOM
         </h1>
         <p className="font-sintony text-[14px] leading-[16px] text-black">
@@ -33,7 +46,7 @@ export const JoinRoomForm = ({
       </div>
 
       {/* Form inputs */}
-      <div className="space-y-4 mb-16">
+      <div className="space-y-4 w-full">
         <Input
           type="text"
           placeholder="Enter your name"
@@ -52,7 +65,7 @@ export const JoinRoomForm = ({
       </div>
 
       {/* Action buttons */}
-      <div className="space-y-3">
+      <div className="space-y-3 grow w-full flex flex-col items-center justify-end">
         <button
           onClick={onJoinRoom}
           disabled={!playerName.trim() || !roomId.trim()}
@@ -74,5 +87,5 @@ export const JoinRoomForm = ({
         </button>
       </div>
     </div>
-  </div>
-);
+  );
+};

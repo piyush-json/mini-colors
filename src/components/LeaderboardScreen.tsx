@@ -52,7 +52,7 @@ export const LeaderboardScreen = () => {
         );
 
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as LeaderboardData;
           setLeaderboardData(data);
         } else {
           throw new Error("Failed to fetch leaderboard");

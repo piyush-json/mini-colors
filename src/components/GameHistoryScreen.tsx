@@ -48,7 +48,7 @@ export const GameHistoryScreen = () => {
           `/api/game/history?userId=${encodeURIComponent(userId)}`,
         );
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as any;
           setGameHistory(data.history || []);
           setStats(
             data.stats || {

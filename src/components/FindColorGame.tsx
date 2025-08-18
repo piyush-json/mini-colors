@@ -24,9 +24,7 @@ export const FindColorGame = ({
   timeLimit,
   mode = "practice",
 }: FindColorGameProps) => {
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [gameStartTime, setGameStartTime] = useState<number | null>(null);
-
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const {
     gameStage,
     capturedImage,
@@ -48,70 +46,12 @@ export const FindColorGame = ({
   useEffect(() => {
     if (targetColor) {
       initializeGame(targetColor, isMultiplayer);
-      if (timeLimit) {
-        setTimeRemaining(timeLimit);
-        setGameStartTime(Date.now());
-      }
+      setHasSubmitted(false); // Reset submission state when new game starts
     }
   }, [targetColor, isMultiplayer, timeLimit, initializeGame]);
 
-  // Timer countdown effect
-  useEffect(() => {
-    if (
-      timeLimit &&
-      timeRemaining !== null &&
-      timeRemaining > 0 &&
-      !gameFinished
-    ) {
-      const timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev === null || prev <= 1) {
-            // Time's up - auto submit with 0 score
-            const timeTaken = gameStartTime
-              ? Math.floor((Date.now() - gameStartTime) / 1000)
-              : timeLimit;
-            onScoreSubmit(0, timeTaken, targetColor || undefined);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [
-    timeLimit,
-    timeRemaining,
-    gameFinished,
-    onScoreSubmit,
-    targetColor,
-    gameStartTime,
-  ]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   return (
     <div className={cn("space-y-6 w-full mx-auto", className)}>
-      {/* Timer Display */}
-      {timeLimit && timeRemaining !== null && (
-        <div className="flex justify-center">
-          <div
-            className={cn(
-              "px-4 py-2 border-2 border-black rounded-lg font-hartone text-[18px]",
-              timeRemaining <= 10
-                ? "bg-red-100 text-red-600"
-                : "bg-white text-black",
-            )}
-          >
-            Time: {formatTime(timeRemaining)}
-          </div>
-        </div>
-      )}
-
       {/* Target Color Display */}
       <div className="flex flex-col items-center gap-4">
         <div
@@ -252,22 +192,31 @@ export const FindColorGame = ({
             className={cn(
               "w-full h-[51px] border border-black rounded-[39px] flex items-center justify-center font-hartone text-[30px] font-normal",
               {
-                "bg-[#FFE254] text-black cursor-pointer": !isLoading,
-                "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed": isLoading,
+                "bg-[#FFE254] text-black cursor-pointer":
+                  !isLoading && !hasSubmitted,
+                "bg-[#CECCC3] text-[#847E7E] cursor-not-allowed":
+                  isLoading || hasSubmitted,
               },
+              (hasSubmitted || isLoading) &&
+                "opacity-50 cursor-not-allowed hover:shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0",
             )}
             style={{
               boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
               letterSpacing: "7.5%",
             }}
             onClick={() => {
-              if (isLoading) return;
+              if (isLoading || hasSubmitted) return;
               console.log("Submitting result...");
+              setHasSubmitted(true); // Disable button after submission
               submitResult(onScoreSubmit, mode);
             }}
-            disabled={isLoading}
+            disabled={isLoading || hasSubmitted}
           >
-            {isLoading ? "SUBMITTING..." : "SUBMIT"}
+            {isLoading
+              ? "SUBMITTING..."
+              : hasSubmitted
+                ? "SUBMITTED"
+                : "SUBMIT"}
           </button>
         </div>
       )}

@@ -65,9 +65,6 @@ export const ColorMixingGame = ({
   mode = "practice",
   timeLimit,
 }: ColorMixingGameProps = {}) => {
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [gameStartTime, setGameStartTime] = useState<number | null>(null);
-
   const {
     state,
     targetColorHex,
@@ -89,10 +86,6 @@ export const ColorMixingGame = ({
   useEffect(() => {
     if (targetColor) {
       initializeGame(targetColor, isMultiplayer);
-      if (timeLimit) {
-        setTimeRemaining(timeLimit);
-        setGameStartTime(Date.now());
-      }
     }
   }, [targetColor, isMultiplayer, timeLimit, initializeGame]);
 
@@ -102,69 +95,9 @@ export const ColorMixingGame = ({
     }
   }, [state.timer, gameContext]);
 
-  // Timer countdown effect
-  useEffect(() => {
-    if (
-      timeLimit &&
-      timeRemaining !== null &&
-      timeRemaining > 0 &&
-      !state.showResults
-    ) {
-      const timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev === null || prev <= 1) {
-            // Time's up - auto submit with current mix
-            const timeTaken = gameStartTime
-              ? Math.floor((Date.now() - gameStartTime) / 1000)
-              : timeLimit;
-            handleMix().then((attempt) => {
-              if (attempt && onScoreSubmit) {
-                onScoreSubmit(
-                  attempt.matchPercentage,
-                  timeTaken,
-                  targetColorHex || targetColor || undefined,
-                  mixedColorHex,
-                );
-              }
-            });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [
-    timeLimit,
-    timeRemaining,
-    state.showResults,
-    onScoreSubmit,
-    targetColor,
-    targetColorHex,
-    mixedColorHex,
-    gameStartTime,
-    handleMix,
-  ]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   if (mode === "daily" && !targetColor) {
     return (
       <div className="flex flex-col items-center gap-[55px] w-full  mx-auto">
-        {/* Timer Display - Loading State */}
-        {timeLimit && (
-          <div className="flex justify-center">
-            <div className="px-4 py-2 border-2 border-black rounded-lg font-hartone text-[18px] bg-gray-200 text-gray-500">
-              Time: {formatTime(timeLimit)}
-            </div>
-          </div>
-        )}
-
         {/* Target Color Display with Loading */}
         <div className="flex flex-col items-center gap-[17px] w-full">
           <div className="relative w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center bg-[#f0f0f0]">
@@ -215,22 +148,6 @@ export const ColorMixingGame = ({
 
   return (
     <div className="flex flex-col items-center gap-12 w-full  mx-auto">
-      {/* Timer Display */}
-      {timeLimit && timeRemaining !== null && (
-        <div className="flex justify-center">
-          <div
-            className={cn(
-              "px-4 py-2 border-2 border-black rounded-lg font-hartone text-[18px]",
-              timeRemaining <= 10
-                ? "bg-red-100 text-red-600"
-                : "bg-white text-black",
-            )}
-          >
-            Time: {formatTime(timeRemaining)}
-          </div>
-        </div>
-      )}
-
       {/* Target and Your Color Display */}
       <div className="flex flex-col items-center gap-[17px] w-full">
         {/* Color Display */}
@@ -331,11 +248,9 @@ export const ColorMixingGame = ({
           const attempt = await handleMix();
           console.log("Mix submitted:", attempt);
           if (attempt && onScoreSubmit) {
-            const timeTaken = gameStartTime
-              ? Math.floor((Date.now() - gameStartTime) / 1000)
-              : state.startTime
-                ? Math.floor((Date.now() - state.startTime) / 1000)
-                : 0;
+            const timeTaken = state.startTime
+              ? Math.floor((Date.now() - state.startTime) / 1000)
+              : 0;
             onScoreSubmit(
               attempt.matchPercentage,
               timeTaken,
@@ -344,11 +259,7 @@ export const ColorMixingGame = ({
             );
           }
         }}
-        disabled={
-          disabled ||
-          state.showResults ||
-          (timeRemaining !== null && timeRemaining <= 0)
-        }
+        disabled={disabled || state.showResults}
         className={cn(
           "w-full h-[51px] bg-[#FFE254] border border-black rounded-[39px] shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]",
           "text-[30px] font-hartone leading-[33px] tracking-[7.5%] text-black",
@@ -356,9 +267,7 @@ export const ColorMixingGame = ({
           "transition-all duration-150",
           "hover:shadow-[0px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px]",
           "active:shadow-none active:translate-y-[4px]",
-          (disabled ||
-            state.showResults ||
-            (timeRemaining !== null && timeRemaining <= 0)) &&
+          (disabled || state.showResults) &&
             "opacity-50 cursor-not-allowed hover:shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0",
         )}
       >

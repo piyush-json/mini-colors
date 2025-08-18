@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { fid, notification } = body;
+    const { fid, notification } = body as any;
 
     const result = await sendFrameNotification({
       fid,
@@ -14,10 +14,7 @@ export async function POST(request: Request) {
     });
 
     if (result.state === "error") {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

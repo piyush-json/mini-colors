@@ -61,7 +61,7 @@ function decode(encoded: string) {
 export async function POST(request: Request) {
   const requestJson = await request.json();
 
-  const { header: encodedHeader, payload: encodedPayload } = requestJson;
+  const { header: encodedHeader, payload: encodedPayload } = requestJson as any;
 
   const headerData = decode(encodedHeader);
   const event = decode(encodedPayload);

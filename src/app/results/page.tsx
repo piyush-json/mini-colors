@@ -9,6 +9,7 @@ import html2canvas from "html2canvas";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
 import { getMintCost, useMintNFT } from "@/lib/nft-contract";
 import { generateFarcasterShareUrl } from "@/lib/farcaster-share";
+import { rgbOrHslToHex } from "@/lib/color-mixing-utils";
 // import { useFrame } from "@/lib/FrameContext";
 
 export default function ResultsPage() {
@@ -36,9 +37,17 @@ export default function ResultsPage() {
     try {
       console.log("Share button clicked");
 
+      // convert both colors to hex if in rgb or hsl
+      const convertToHex = (color: string) => {
+        if (color.startsWith("rgb") || color.startsWith("hsl")) {
+          return rgbOrHslToHex(color as `rgb${string}` | `hsl${string}`);
+        }
+        return color; // Already in hex or other format
+      };
+
       const shareData = {
-        targetColor: results.targetColor,
-        capturedColor: results.capturedColor,
+        targetColor: convertToHex(results.targetColor),
+        capturedColor: convertToHex(results.capturedColor),
         similarity: results.similarity,
         userName: getUserName(),
         date: new Date().toLocaleDateString("en-US", {
@@ -83,10 +92,18 @@ export default function ResultsPage() {
       // Convert canvas to base64
       const base64Image = canvas.toDataURL("image/png");
 
+      // Convert colors to hex format
+      const convertToHex = (color: string) => {
+        if (color.startsWith("rgb") || color.startsWith("hsl")) {
+          return rgbOrHslToHex(color as `rgb${string}` | `hsl${string}`);
+        }
+        return color; // Already in hex or other format
+      };
+
       // Prepare metadata for the color game API
       const gameMetadata = {
-        targetColor: results.targetColor,
-        capturedColor: results.capturedColor,
+        targetColor: convertToHex(results.targetColor),
+        capturedColor: convertToHex(results.capturedColor),
         similarity: results.similarity,
         timeTaken: results.timeTaken,
         date: new Date().toISOString().split("T")[0], // YYYY-MM-DD format
@@ -141,11 +158,19 @@ export default function ResultsPage() {
     router.push("/game");
   };
 
+  // Convert colors to hex format for consistent display
+  const convertToHex = (color: string) => {
+    if (color.startsWith("rgb") || color.startsWith("hsl")) {
+      return rgbOrHslToHex(color as `rgb${string}` | `hsl${string}`);
+    }
+    return color; // Already in hex or other format
+  };
+
   return (
     <div className="w-full grow flex flex-col items-center">
       <ShareMintScreen
-        targetColor={results.targetColor}
-        capturedColor={results.capturedColor}
+        targetColor={convertToHex(results.targetColor)}
+        capturedColor={convertToHex(results.capturedColor)}
         similarity={results.similarity}
         timeTaken={results.timeTaken}
         mode={results.mode}

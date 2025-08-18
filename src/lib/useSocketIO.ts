@@ -35,7 +35,7 @@ export interface SessionLeaderboard {
 
 export interface GameInfo {
   roomId: string;
-  hostId: string;
+  dennerId: string;
   dennerName: string;
   targetColor: string;
   gameState:
@@ -48,6 +48,7 @@ export interface GameInfo {
   currentRound: number;
   maxRounds: number;
   guessTime: number;
+  currentGuessTime: number;
   startTime: number | null;
   endTime: number | null;
   playerCount: number;
@@ -78,7 +79,9 @@ export interface SocketEvent {
   timestamp?: number;
 }
 
-export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
+export const useSocketIO = (
+  serverUrl: string = "https://base-socket.iitmandi.co.in",
+) => {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
@@ -109,7 +112,7 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     socket.on("connect", () => {
       setIsConnected(true);
       setError(null);
-      console.log("Connected to server");
+      console.log("Connected to server", socket.id);
     });
 
     socket.on("disconnect", () => {
@@ -201,10 +204,10 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
 
   // Connect to server
   const connect = useCallback(() => {
-    if (socketRef.current && !isConnected) {
+    if (socketRef.current && !socketRef.current.connected) {
       socketRef.current.connect();
     }
-  }, [isConnected]);
+  }, []);
 
   // Disconnect from server
   const disconnect = useCallback(() => {
@@ -354,6 +357,13 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     setError(null);
   }, []);
 
+  // Check if current user is the denner
+  const isCurrentUserDenner = useCallback(() => {
+    const currentUserId = socketRef.current?.id;
+    if (!gameInfo || !currentUserId) return false;
+    return currentUserId === gameInfo.dennerId;
+  }, [gameInfo]);
+
   return {
     // Connection state
     isConnected,
@@ -363,6 +373,7 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     currentRoom,
     gameInfo,
     events,
+    currentUserId: socketRef.current?.id || null,
 
     // Connection methods
     connect,
@@ -387,5 +398,8 @@ export const useSocketIO = (serverUrl: string = "http://localhost:3001") => {
     // Utility methods
     clearEvents,
     clearError,
+
+    // Helper methods
+    isCurrentUserDenner,
   };
 };

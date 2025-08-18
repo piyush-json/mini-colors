@@ -30,7 +30,7 @@ export function useUserStreak() {
           throw new Error("Failed to fetch streak");
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as { streak: number };
         setStreak(data.streak);
         setError(null);
       } catch (err) {

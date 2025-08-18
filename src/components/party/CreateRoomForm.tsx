@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
+import { useMiniKitUser } from "@/lib/useMiniKitUser";
 import {
   Select,
   SelectContent,
@@ -40,12 +42,24 @@ export const CreateRoomForm = ({
   onBack,
   showQRCode,
   setShowQRCode,
-}: CreateRoomFormProps) => (
-  <div className="min-h-screen bg-[#FFFFE7] p-4 font-mono">
-    <div className="w-full pt-8">
+}: CreateRoomFormProps) => {
+  const { getUserName } = useMiniKitUser();
+
+  useEffect(() => {
+    // Set default name if available and playerName is empty
+    if (!playerName.trim()) {
+      const defaultName = getUserName();
+      if (defaultName && defaultName !== "Anonymous") {
+        setPlayerName(defaultName);
+      }
+    }
+  }, [playerName, setPlayerName, getUserName]);
+
+  return (
+    <div className="grow pb-8 bg-[#FFFFE7] font-mono w-full flex flex-col items-center gap-8">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="font-hartone text-[39px] leading-[42px] text-black mb-2">
+      <div className="text-center ">
+        <h1 className="font-hartone text-[39px] leading-[42px] font-extralight text-black ">
           CREATE ROOM
         </h1>
         <p className="font-sintony text-[14px] leading-[16px] text-black">
@@ -53,28 +67,11 @@ export const CreateRoomForm = ({
         </p>
       </div>
 
-      {/* Players section with avatars */}
-      <div className="mb-8">
-        <h3 className="font-sintony text-[20px] leading-[16px] font-bold text-black mb-4">
-          Players (Max: {maxPlayers})
-        </h3>
-        <div className="flex gap-[10px] flex-wrap">
-          {[...Array(Math.min(maxPlayers, 12))].map((_, i) => (
-            <div
-              key={i}
-              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-black bg-white flex items-center justify-center text-gray-400 font-sintony text-xs"
-            >
-              {i + 1}
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Game settings */}
-      <div className="bg-white border-2 border-black rounded-[21px] p-8 mb-8">
-        <div className="space-y-6">
+      <div className="bg-white border-2 border-black rounded-[21px] w-full p-8 gap-8 flex flex-col items-center">
+        <div className="space-y-6 w-full">
           {/* Rounds */}
-          <div className="space-y-2">
+          <div className="w-full">
             <label className="font-hartone text-[18px] leading-[42px] text-black">
               Rounds
             </label>
@@ -115,7 +112,7 @@ export const CreateRoomForm = ({
           </div>
 
           {/* Guess Time */}
-          <div className="space-y-2">
+          <div className="w-full">
             <label className="font-hartone text-[18px] leading-[42px] text-black">
               GUESS TIME
             </label>
@@ -161,28 +158,8 @@ export const CreateRoomForm = ({
             </Select>
           </div>
 
-          {/* Timer Preview */}
-          <div className="space-y-2">
-            <label className="font-hartone text-[18px] leading-[42px] text-black">
-              TIMER PREVIEW
-            </label>
-            <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-              <p className="font-sintony text-[12px] text-gray-600 mb-3 text-center">
-                This is how the timer will look during gameplay
-              </p>
-              <TimerDisplay
-                timeLeft={Math.floor(guessTime * 0.7)} // Show at 70% to demonstrate urgency
-                totalTime={guessTime}
-                urgencyLevel={guessTime <= 30 ? "warning" : "normal"}
-                showProgress={true}
-                showUrgencyMessage={false}
-                className="scale-90 origin-center"
-              />
-            </div>
-          </div>
-
           {/* No of Players - Now an Input */}
-          <div className="space-y-2">
+          <div className="w-full">
             <label className="font-hartone text-[18px] leading-[42px] text-black">
               NO OF PLAYERS
             </label>
@@ -198,63 +175,46 @@ export const CreateRoomForm = ({
               placeholder="Enter number of players (2-12)"
             />
           </div>
-
-          {/* Game */}
-          <div className="space-y-2">
-            <label className="font-hartone text-[18px] leading-[42px] text-black">
-              GAME
-            </label>
-            <div className="w-full h-[40px] bg-[#F5F5F5] border border-black rounded-[7px] flex items-center px-3">
-              <span className="font-sintony text-[16px] text-gray-600">
-                Selected by denner in lobby
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Invite button */}
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => setShowQRCode(!showQRCode)}
-            className="bg-black text-[#FFFFE7] font-hartone text-[16px] leading-[16px] tracking-[1.2px] px-[35px] py-[10px] rounded-[8px] hover:bg-gray-800 transition-colors"
-          >
-            {showQRCode ? "HIDE QR" : "INVITE"}
-          </button>
-        </div>
+        {/* <button
+        onClick={() => setShowQRCode(!showQRCode)}
+        className="bg-black text-[#FFFFE7] font-hartone text-[16px] leading-[16px] tracking-[1.2px] px-[35px] py-[10px] rounded-[8px] hover:bg-gray-800 transition-colors w-full"
+      >
+        {showQRCode ? "HIDE QR" : "INVITE"}
+      </button>
 
-        {/* QR Code display */}
-        {showQRCode && (
-          <div className="flex justify-center mt-6">
-            <div className="bg-white p-4 border border-black rounded-lg">
-              <QRCodeSVG
-                value={
-                  typeof window !== "undefined"
-                    ? `${window.location.origin}/party`
-                    : "https://example.com/party"
-                }
-                size={128}
-              />
-              <p className="text-center mt-2 font-sintony text-[12px] text-gray-600">
-                Scan to join party mode
-              </p>
-            </div>
+      {showQRCode && (
+        <div className="flex justify-center mt-6">
+          <div className="bg-white p-4 border border-black rounded-lg">
+            <QRCodeSVG
+              value={
+                typeof window !== "undefined"
+                  ? `${window.location.origin}/party`
+                  : "https://example.com/party"
+              }
+              size={128}
+            />
+            <p className="text-center mt-2 font-sintony text-[12px] text-gray-600">
+              Scan to join party mode
+            </p>
           </div>
-        )}
+        </div>
+      )} */}
       </div>
 
       {/* Player name input */}
-      <div className="mb-6">
-        <Input
-          type="text"
-          placeholder="Enter your name"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-          className="w-full h-[52px] bg-white border border-black rounded-[12px] px-4 font-sintony text-[16px] text-black placeholder-gray-500 focus:ring-2 focus:ring-black"
-        />
-      </div>
+      <Input
+        type="text"
+        placeholder="Enter your name"
+        value={playerName}
+        onChange={(e) => setPlayerName(e.target.value)}
+        className="w-full h-[52px] bg-white border border-black rounded-[12px] px-4 font-sintony text-[16px] text-black placeholder-gray-500 focus:ring-2 focus:ring-black"
+      />
 
       {/* Action buttons */}
-      <div className="space-y-3">
+      <div className="space-y-3 w-full grow flex flex-col items-center justify-end">
         <button
           onClick={onCreateRoom}
           disabled={!playerName.trim()}
@@ -276,5 +236,5 @@ export const CreateRoomForm = ({
         </button>
       </div>
     </div>
-  </div>
-);
+  );
+};
