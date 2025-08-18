@@ -2,7 +2,7 @@ import { useAccount, useSendTransaction, useSwitchChain } from "wagmi";
 import { encodeFunctionData } from "viem";
 
 export const CONTRACT_ADDRESS = "0xe0303cc1d8Fb289b266e4D0273bF9ab78e236806"; // your contract
-export const CONTRACT_CHAIN_ID = 84532; // base sepolia, update if needed
+export const CONTRACT_CHAIN_ID = 8453; // base, update if needed
 
 export const COLOR_GAME_NFT_ABI = [
   {
