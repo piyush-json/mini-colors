@@ -152,7 +152,7 @@ export default function ResultsPage() {
       // Show success dialog after successful mint
       setTimeout(() => {
         setShowSuccessDialog(true);
-      }, 3000);
+      }, 10000);
     } catch (error) {
       console.error("Error minting NFT:", error);
       alert("Failed to mint NFT. Please try again.");
