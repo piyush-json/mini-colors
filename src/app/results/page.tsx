@@ -150,7 +150,9 @@ export default function ResultsPage() {
       await mint(metadataUri, getMintCost());
 
       // Show success dialog after successful mint
-      setShowSuccessDialog(true);
+      setTimeout(() => {
+        setShowSuccessDialog(true);
+      }, 3000);
     } catch (error) {
       console.error("Error minting NFT:", error);
       alert("Failed to mint NFT. Please try again.");
