@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ColorMixingSDK, ColorMixingState } from "./mix-sdk";
+import { ColorMixingSDK, ColorMixingState, ColorRGB } from "./mix-sdk";
 import { useMiniKitUser } from "./useMiniKitUser";
 
 // Debounce utility function

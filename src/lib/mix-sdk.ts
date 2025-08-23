@@ -97,26 +97,164 @@ export class ColorMixingSDK {
     return { ...this.state };
   }
 
-  generateChallenge(targetColor?: ColorRGB): ColorMixingChallenge {
-    const target = targetColor || generateRandomColor();
-    const palette = generateColorPalette(target);
+  private findOptimalSolution(
+    targetColor: ColorRGB,
+    palette: ReturnType<typeof generateColorPalette>,
+  ) {
+    let bestScore = 0;
+    let bestSolution: ColorPercentages | null = null;
 
-    const challenge: ColorMixingChallenge = {
+    const percentageSteps = [
+      0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90,
+      95, 100,
+    ];
+
+    for (const p1 of percentageSteps) {
+      for (const p2 of percentageSteps) {
+        for (const p3 of percentageSteps) {
+          for (const white of percentageSteps) {
+            for (const black of percentageSteps) {
+              // Skip if total exceeds 100%
+              if (p1 + p2 + p3 + white + black > 100) continue;
+
+              const testPercentages: ColorPercentages = {
+                color1: { ...palette.color1, percentage: p1 },
+                color2: { ...palette.color2, percentage: p2 },
+                distractor: { ...palette.distractor, percentage: p3 },
+                white,
+                black,
+              };
+
+              const mixedColor = mixColors(testPercentages);
+              const deltaE = calculateDeltaE(targetColor, mixedColor);
+              const matchPercentage = calculatePercentageMatch(deltaE);
+
+              if (matchPercentage > bestScore) {
+                bestScore = matchPercentage;
+                bestSolution = testPercentages;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (bestSolution) {
+      const mixedColor = mixColors(bestSolution);
+      const deltaE = calculateDeltaE(targetColor, mixedColor);
+      const matchPercentage = calculatePercentageMatch(deltaE);
+
+      if (matchPercentage > 96) {
+        console.log(
+          `Found solution with score: ${matchPercentage.toFixed(2)}% for color RGB(${targetColor.r}, ${targetColor.g}, ${targetColor.b})`,
+        );
+      }
+
+      return {
+        colorPercentages: bestSolution,
+        mixedColor,
+        matchPercentage,
+        deltaE,
+      };
+    }
+
+    return null;
+  }
+
+  generateChallenge(targetColor?: ColorRGB): ColorMixingChallenge {
+    const fallbackColor = generateRandomColor();
+    const fallbackPalette = generateColorPalette(fallbackColor);
+    let challenge = {
       id: Math.random().toString(36).substr(2, 9),
-      targetColor: target,
+      targetColor: fallbackColor,
       palette: {
-        color1: palette.color1.color,
-        color2: palette.color2.color,
-        distractor: palette.distractor.color,
+        color1: fallbackPalette.color1.color,
+        color2: fallbackPalette.color2.color,
+        distractor: fallbackPalette.distractor.color,
       },
       createdAt: Date.now(),
     };
 
+    if (targetColor) {
+      const palette = generateColorPalette(targetColor);
+      challenge = {
+        id: Math.random().toString(36).substr(2, 9),
+        targetColor: targetColor,
+        palette: {
+          color1: palette.color1.color,
+          color2: palette.color2.color,
+          distractor: palette.distractor.color,
+        },
+        createdAt: Date.now(),
+      };
+      const solution = this.findOptimalSolution(targetColor, palette);
+      console.log(solution);
+    } else {
+      console.log("Generating solvable challenge...");
+      let attempts = 0;
+      const maxAttempts = 100;
+      let foundSolvable = false;
+
+      while (attempts < maxAttempts && !foundSolvable) {
+        const randomColor = generateRandomColor();
+        const palette = generateColorPalette(randomColor);
+
+        const solution = this.findOptimalSolution(randomColor, palette);
+
+        if (solution && solution.matchPercentage > 95) {
+          challenge = {
+            id: Math.random().toString(36).substr(2, 9),
+            targetColor: randomColor,
+            palette: {
+              color1: palette.color1.color,
+              color2: palette.color2.color,
+              distractor: palette.distractor.color,
+            },
+            createdAt: Date.now(),
+          };
+          foundSolvable = true;
+        }
+
+        attempts++;
+      }
+
+      if (!foundSolvable) {
+        const fallbackColor = generateRandomColor();
+        const palette = generateColorPalette(fallbackColor);
+
+        challenge = {
+          id: Math.random().toString(36).substr(2, 9),
+          targetColor: fallbackColor,
+          palette: {
+            color1: palette.color1.color,
+            color2: palette.color2.color,
+            distractor: palette.distractor.color,
+          },
+          createdAt: Date.now(),
+        };
+      }
+    }
+
     this.state.currentChallenge = challenge;
     this.state.colorPercentages = {
-      color1: palette.color1,
-      color2: palette.color2,
-      distractor: palette.distractor,
+      color1: {
+        color: challenge.palette.color1,
+        percentage: 0,
+        name: "",
+        label: "",
+      },
+      color2: {
+        color: challenge.palette.color2,
+        percentage: 0,
+        name: "",
+        label: "",
+      },
+      distractor: {
+        color: challenge.palette.distractor,
+        percentage: 0,
+        name: "",
+        label: "",
+      },
       white: 0,
       black: 0,
     };

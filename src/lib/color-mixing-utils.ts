@@ -283,78 +283,97 @@ export function generateColorPalette(targetColor: ColorRGB) {
     { name: "orange", color: BASE_COLORS.orange, label: "Orange" },
   ];
 
-  // For blue colors
+  // Smart color selection based on target color hue and color theory
+  let primaryColors: typeof availableColors = [];
+  let secondaryColors: typeof availableColors = [];
+
+  // For blue colors (210-240°)
   if (h >= 210 && h <= 240) {
-    const blueColor = availableColors.find((c) => c.name === "blue")!;
-    const greenColor = availableColors.find((c) => c.name === "green")!;
-    const redColor = availableColors.find((c) => c.name === "red")!;
-
-    const colors = shuffleArray([
-      { ...blueColor, percentage: 0 },
-      { ...greenColor, percentage: 0 },
-      { ...redColor, percentage: 0 },
-    ]);
-
-    return {
-      color1: colors[0],
-      color2: colors[1],
-      distractor: colors[2],
-    };
+    primaryColors = availableColors.filter((c) =>
+      ["blue", "green"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["red", "purple", "yellow"].includes(c.name),
+    );
+  }
+  // For red colors (0-30° and 330-360°)
+  else if ((h >= 0 && h <= 30) || (h >= 330 && h <= 360)) {
+    primaryColors = availableColors.filter((c) =>
+      ["red", "orange", "yellow"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["blue", "purple", "green"].includes(c.name),
+    );
+  }
+  // For green colors (90-150°)
+  else if (h >= 90 && h <= 150) {
+    primaryColors = availableColors.filter((c) =>
+      ["green", "yellow", "blue"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["red", "orange", "purple"].includes(c.name),
+    );
+  }
+  // For yellow colors (45-75°)
+  else if (h >= 45 && h <= 75) {
+    primaryColors = availableColors.filter((c) =>
+      ["yellow", "orange", "green"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["red", "blue", "purple"].includes(c.name),
+    );
+  }
+  // For purple colors (270-300°)
+  else if (h >= 270 && h <= 300) {
+    primaryColors = availableColors.filter((c) =>
+      ["purple", "blue", "red"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["green", "yellow", "orange"].includes(c.name),
+    );
+  }
+  // For orange colors (15-45°)
+  else if (h >= 15 && h <= 45) {
+    primaryColors = availableColors.filter((c) =>
+      ["orange", "red", "yellow"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["green", "blue", "purple"].includes(c.name),
+    );
+  }
+  // Default: use complementary colors based on color theory
+  else {
+    // For any other hue, use colors that can create a wider range
+    primaryColors = availableColors.filter((c) =>
+      ["red", "yellow", "blue"].includes(c.name),
+    );
+    secondaryColors = availableColors.filter((c) =>
+      ["green", "purple", "orange"].includes(c.name),
+    );
   }
 
-  // For red colors
-  if ((h >= 0 && h <= 30) || (h >= 330 && h <= 360)) {
-    const redColor = availableColors.find((c) => c.name === "red")!;
-    const yellowColor = availableColors.find((c) => c.name === "yellow")!;
-    const blueColor = availableColors.find((c) => c.name === "blue")!;
-
-    const colors = shuffleArray([
-      { ...redColor, percentage: 0 },
-      { ...yellowColor, percentage: 0 },
-      { ...blueColor, percentage: 0 },
-    ]);
-
-    return {
-      color1: colors[0],
-      color2: colors[1],
-      distractor: colors[2],
-    };
+  // Ensure we have enough colors
+  if (primaryColors.length < 2) {
+    primaryColors = availableColors.filter((c) =>
+      ["red", "yellow", "blue"].includes(c.name),
+    );
+  }
+  if (secondaryColors.length < 1) {
+    secondaryColors = availableColors.filter((c) =>
+      ["green", "purple", "orange"].includes(c.name),
+    );
   }
 
-  // For green colors
-  if (h >= 90 && h <= 150) {
-    const greenColor = availableColors.find((c) => c.name === "green")!;
-    const yellowColor = availableColors.find((c) => c.name === "yellow")!;
-    const blueColor = availableColors.find((c) => c.name === "blue")!;
-
-    const colors = shuffleArray([
-      { ...greenColor, percentage: 0 },
-      { ...yellowColor, percentage: 0 },
-      { ...blueColor, percentage: 0 },
-    ]);
-
-    return {
-      color1: colors[0],
-      color2: colors[1],
-      distractor: colors[2],
-    };
-  }
-
-  // Default: use red, yellow, blue
-  const redColor = availableColors.find((c) => c.name === "red")!;
-  const yellowColor = availableColors.find((c) => c.name === "yellow")!;
-  const blueColor = availableColors.find((c) => c.name === "blue")!;
-
-  const colors = shuffleArray([
-    { ...redColor, percentage: 0 },
-    { ...yellowColor, percentage: 0 },
-    { ...blueColor, percentage: 0 },
+  // Select 3 colors: 2 from primary (for better mixing), 1 from secondary (as distractor)
+  const selectedColors = shuffleArray([
+    ...shuffleArray(primaryColors).slice(0, 2),
+    ...shuffleArray(secondaryColors).slice(0, 1),
   ]);
 
   return {
-    color1: colors[0],
-    color2: colors[1],
-    distractor: colors[2],
+    color1: { ...selectedColors[0], percentage: 0 },
+    color2: { ...selectedColors[1], percentage: 0 },
+    distractor: { ...selectedColors[2], percentage: 0 },
   };
 }
 
