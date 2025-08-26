@@ -71,24 +71,23 @@ export async function submitToLeaderboard(
     .limit(1);
 
   if (existingEntry.length > 0) {
-    // Update only if new score is better
-    // if (score > existingEntry[0].score) {
-    //   await db
-    //     .update(leaderboard)
-    //     .set({
-    //       score,
-    //       userName,
-    //       updatedAt: new Date(),
-    //     })
-    //     .where(
-    //       and(
-    //         eq(leaderboard.userId, userId),
-    //         eq(leaderboard.date, leaderboardDate),
-    //         eq(leaderboard.gameType, gameType),
-    //       ),
-    //     );
-    //   return { updated: true };
-    // }
+    if (score > existingEntry[0].score) {
+      await db
+        .update(leaderboard)
+        .set({
+          score,
+          userName,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leaderboard.userId, userId),
+            eq(leaderboard.date, leaderboardDate),
+            eq(leaderboard.gameType, gameType),
+          ),
+        );
+      return { updated: true };
+    }
     return { updated: false };
   }
 
