@@ -190,7 +190,6 @@ export class ColorMixingSDK {
         createdAt: Date.now(),
       };
       const solution = this.findOptimalSolution(targetColor, palette);
-      console.log(solution, palette);
     } else {
       let attempts = 0;
       const maxAttempts = 100;
@@ -260,13 +259,6 @@ export class ColorMixingSDK {
       black: 0,
     };
 
-    // Debug: Log the actual colors being assigned
-    console.log("🎨 Challenge colors assigned:", {
-      color1: challenge.palette.color1,
-      color2: challenge.palette.color2,
-      distractor: challenge.palette.distractor,
-      targetColor: challenge.targetColor,
-    });
     this.state.mixedColor = { r: 255, g: 255, b: 255 };
     this.state.showResults = false;
     this.state.lastScore = null;

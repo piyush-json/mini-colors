@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
         userId,
         userName || "Anonymous",
         Math.round(finalScore), // Use calculated finalScore
+        timeTaken,
         gameType || "color-mixing", // Pass gameType to leaderboard
         attemptDate,
       );

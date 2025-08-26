@@ -22,6 +22,20 @@
       "when": 1755461316454,
       "tag": "0002_broken_lester",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756218785892,
+      "tag": "0003_careless_the_initiative",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1756219086754,
+      "tag": "0004_smiling_calypso",
+      "breakpoints": true
     }
   ]
 }

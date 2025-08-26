@@ -34,6 +34,7 @@ export const dailyAttempts = pgTable(
       table.userId,
       table.date,
       table.gameType,
+      table.finalScore,
     ),
     index("daily_attempts_user_id_idx").on(table.userId),
     index("daily_attempts_date_idx").on(table.date),
@@ -54,6 +55,9 @@ export const leaderboard = pgTable(
       .notNull()
       .default("color-mixing"), // "color-mixing" or "finding"
     score: integer("score").notNull(),
+    timeTaken: decimal("time_taken", { precision: 8, scale: 3 })
+      .notNull()
+      .default("0"), // seconds with milliseconds
     rank: integer("rank"), // Daily rank
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

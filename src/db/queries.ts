@@ -52,6 +52,7 @@ export async function submitToLeaderboard(
   userId: string,
   userName: string,
   score: number,
+  timeTaken: number,
   gameType: string = "color-mixing",
   date?: string,
 ): Promise<{ updated: boolean }> {
@@ -98,6 +99,7 @@ export async function submitToLeaderboard(
     date: leaderboardDate,
     gameType,
     score,
+    timeTaken: timeTaken.toString(),
   };
 
   await db.insert(leaderboard).values(newEntry);
@@ -123,7 +125,7 @@ export async function getLeaderboard(
       userName: leaderboard.userName,
       score: leaderboard.score,
       gameType: leaderboard.gameType,
-      rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC)`.as(
+      rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC, ${leaderboard.timeTaken} ASC)`.as(
         "rank",
       ),
     })
@@ -131,7 +133,7 @@ export async function getLeaderboard(
     .where(
       whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
     )
-    .orderBy(desc(leaderboard.score))
+    .orderBy(desc(leaderboard.score), desc(leaderboard.timeTaken))
     .limit(10);
 
   let userRanking = null;
@@ -153,7 +155,7 @@ export async function getLeaderboard(
         userName: leaderboard.userName,
         score: leaderboard.score,
         gameType: leaderboard.gameType,
-        rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC)`.as(
+        rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC, ${leaderboard.timeTaken} ASC)`.as(
           "rank",
         ),
       })

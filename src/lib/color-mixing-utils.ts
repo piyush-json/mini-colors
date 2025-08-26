@@ -207,7 +207,7 @@ export function calculateFinalScore(similarity: number, timeTaken: number) {
   // Final score: 85% similarity + 15% time factor
   const finalScore = similarityScore * 0.85 + timeScore * 0.15;
 
-  return Math.max(0, Math.min(100, finalScore));
+  return Math.max(0, similarity);
 }
 
 // Mix colors based on percentages

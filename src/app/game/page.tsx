@@ -100,7 +100,6 @@ export default function GamePageContent() {
     console.log("Captured color:", capturedColor);
 
     const targetColorForResults = actualTargetColor || getTargetColor();
-    console.log("Target color for results:", targetColorForResults);
 
     if (!targetColorForResults) {
       console.error("No target color available for results");

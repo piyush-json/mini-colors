@@ -1,0 +1,1 @@
+ALTER TABLE "leaderboard" ADD COLUMN "time_taken" numeric(8, 3) DEFAULT '0' NOT NULL;
