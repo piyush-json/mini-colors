@@ -78,6 +78,7 @@ export async function submitToLeaderboard(
         .set({
           score,
           userName,
+          timeTaken: timeTaken.toString(),
           updatedAt: new Date(),
         })
         .where(
