@@ -6,6 +6,7 @@ import { ShareMintScreen } from "@/components/ShareMintScreen";
 import { SuccessDialog } from "@/components/SuccessDialog";
 import { useGameResults } from "@/lib/GameResultsContext";
 import { useComposeCast, useMiniKit } from "@coinbase/onchainkit/minikit";
+import sdk from "@farcaster/miniapp-sdk";
 import html2canvas from "html2canvas";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
 import { getMintCost, useMintNFT } from "@/lib/nft-contract";
@@ -61,13 +62,13 @@ export default function ResultsPage() {
       };
       const shareUrl = generateFarcasterShareUrl(shareData);
       console.log("Share URL:", shareUrl);
-      await composeCast({
+      await sdk.actions.composeCast({
         text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score?`,
         embeds: [shareUrl],
       });
     } catch (error) {
       console.error("Error taking screenshot:", error);
-      await composeCast({
+      await sdk.actions.composeCast({
         text: `Just scored ${results?.similarity}% in the color matching game! 🎨 Can you beat my score?`,
       });
     }
