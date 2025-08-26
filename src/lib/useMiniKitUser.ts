@@ -8,7 +8,7 @@ export function useMiniKitUser() {
   const { address } = useAccount();
 
   const getUserId = () => {
-    return context?.user?.fid?.toString() || "anonymous";
+    return context?.user?.fid?.toString() || "anonymous1";
   };
 
   const getUserName = () => {
