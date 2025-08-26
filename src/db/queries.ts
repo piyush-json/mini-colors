@@ -5,7 +5,7 @@ import {
   type NewDailyAttempt,
   type NewLeaderboardEntry,
 } from "./schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, asc } from "drizzle-orm";
 
 // Save daily attempt (simplified - no sessions)
 export async function saveDailyAttempt(
@@ -134,7 +134,7 @@ export async function getLeaderboard(
     .where(
       whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
     )
-    .orderBy(desc(leaderboard.score), desc(leaderboard.timeTaken))
+    .orderBy(desc(leaderboard.score), asc(leaderboard.timeTaken))
     .limit(10);
 
   let userRanking = null;
