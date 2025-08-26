@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
 
     // Check if user already has a daily attempt today
     const existingAttempt = await db
-      .select({ id: dailyAttempts.id })
+      .select({
+        id: dailyAttempts.id,
+        finalScore: dailyAttempts.finalScore,
+      })
       .from(dailyAttempts)
       .where(
         and(
@@ -64,7 +67,10 @@ export async function POST(request: NextRequest) {
       )
       .limit(1);
 
-    if (existingAttempt.length > 0) {
+    if (
+      existingAttempt.length > 0 &&
+      existingAttempt[0].finalScore >= finalScore
+    ) {
       return NextResponse.json(
         {
           error:
