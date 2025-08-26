@@ -13,8 +13,8 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@b3dotfun/sdk": "^0.0.30",
     "@coinbase/onchainkit": "latest",
-    "@farcaster/frame-sdk": "^0.1.8",
     "@farcaster/miniapp-sdk": "^0.1.9",
     "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@radix-ui/react-dialog": "^1.1.15",

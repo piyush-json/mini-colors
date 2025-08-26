@@ -6,7 +6,7 @@ const SocketContext = createContext<ReturnType<typeof useSocketIO> | null>(
 );
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const serverUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
+  const serverUrl = process.env.NEXT_PUBLIC_WS_URL;
   const socket = useSocketIO(serverUrl);
 
   return (

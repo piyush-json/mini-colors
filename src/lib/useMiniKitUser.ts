@@ -12,7 +12,9 @@ export function useMiniKitUser() {
   };
 
   const getUserName = () => {
-    return context?.user?.username || context?.user?.displayName || "Anonymous";
+    return (
+      context?.user?.username || context?.user?.displayName || "Anonymous1"
+    );
   };
   const getUserAddress = () => {
     return address || "0x0000000000000000000000000000000000000000";

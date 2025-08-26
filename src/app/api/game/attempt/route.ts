@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { dailyAttempts } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { saveDailyAttempt, submitToLeaderboard } from "@/db/queries";
+import { calculateFinalScore } from "@/lib/color-mixing-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       similarity,
       timeTaken,
       timeScore,
-      finalScore,
+      finalScore: clientFinalScore, // Ignore client-provided finalScore
       date,
       gameType,
     } = body as {
@@ -37,15 +38,16 @@ export async function POST(request: NextRequest) {
       !targetColor ||
       !capturedColor ||
       typeof similarity !== "number" ||
-      typeof timeTaken !== "number" ||
-      typeof timeScore !== "number" ||
-      typeof finalScore !== "number"
+      typeof timeTaken !== "number"
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
       );
     }
+
+    // Calculate final score on server side based on similarity and time
+    const finalScore = calculateFinalScore(similarity, timeTaken);
 
     const attemptDate = date || new Date().toISOString().split("T")[0];
 
@@ -101,21 +103,21 @@ export async function POST(request: NextRequest) {
         capturedColor,
         similarity,
         timeTaken,
-        timeScore,
-        finalScore,
+        timeScore: Math.round(timeScore || 0), // Ensure timeScore is an integer
+        finalScore: Math.round(finalScore), // Use calculated finalScore
         gameType: gameType || "color-mixing", // Provide default gameType
         streak: currentStreak,
       },
       attemptDate,
     );
 
-    // Automatically submit to leaderboard
+    // Automatically submit to leaderboard using calculated finalScore
     let leaderboardResult = null;
     try {
       leaderboardResult = await submitToLeaderboard(
         userId,
         userName || "Anonymous",
-        finalScore,
+        Math.round(finalScore), // Use calculated finalScore
         gameType || "color-mixing", // Pass gameType to leaderboard
         attemptDate,
       );

@@ -90,6 +90,9 @@ export const ResultsScreen = ({
                 <div className="font-bold text-lg uppercase tracking-wide">
                   FINAL SCORE
                 </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  85% Color Accuracy + 15% Time Factor
+                </div>
               </div>
 
               {/* Detailed Metrics */}
@@ -100,8 +103,8 @@ export const ResultsScreen = ({
                 </div>
                 
                 <div className="flex justify-between items-center p-3 border-2 border-foreground">
-                  <span className="font-bold uppercase tracking-wide">TIME BONUS:</span>
-                  <Badge variant="outline">{lastResult.timeScore}</Badge>
+                  <span className="font-bold uppercase tracking-wide">TIME FACTOR:</span>
+                  <Badge variant="outline">{Math.round((lastResult.finalScore - (lastResult.similarity * 0.85)) * 100) / 100}</Badge>
                 </div>
                 
                 <div className="flex justify-between items-center p-3 border-2 border-foreground">

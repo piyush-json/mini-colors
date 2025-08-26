@@ -34,7 +34,7 @@ export interface ColorPercentages {
   black: number;
 }
 
-// Base colors in RGB format
+// Base colors in RGB format - Enhanced for better neon color mixing
 export const BASE_COLORS = {
   red: { r: 255, g: 0, b: 0 },
   yellow: { r: 255, g: 255, b: 0 },
@@ -189,6 +189,27 @@ export function calculatePercentageMatch(deltaE: number) {
   return Math.round(percentage);
 }
 
+// Calculate final score based on similarity and time factor
+// 85% weightage on similarity, 15% weightage on time factor
+export function calculateFinalScore(similarity: number, timeTaken: number) {
+  // Similarity is already a percentage (0-100)
+  const similarityScore = similarity;
+
+  // Time factor calculation: less time = higher score
+  // Base time of 30 seconds gives full time score
+  // Every additional 10 seconds reduces time score by 10 points
+  const baseTime = 30; // seconds
+  const timeScore = Math.max(
+    0,
+    100 - Math.max(0, (timeTaken - baseTime) / 10) * 10,
+  );
+
+  // Final score: 85% similarity + 15% time factor
+  const finalScore = similarityScore * 0.85 + timeScore * 0.15;
+
+  return Math.max(0, Math.min(100, finalScore));
+}
+
 // Mix colors based on percentages
 export function mixColors(colorPercentages: ColorPercentages) {
   const { color1, color2, distractor, white, black } = colorPercentages;
@@ -273,7 +294,7 @@ function shuffleArray<T>(array: T[]): T[] {
 export function generateColorPalette(targetColor: ColorRGB) {
   const { h } = rgbToHsl(targetColor.r, targetColor.g, targetColor.b);
 
-  // Define available colors
+  // Enhanced available colors including new neon-friendly colors
   const availableColors = [
     { name: "red", color: BASE_COLORS.red, label: "Red" },
     { name: "yellow", color: BASE_COLORS.yellow, label: "Yellow" },
@@ -281,9 +302,15 @@ export function generateColorPalette(targetColor: ColorRGB) {
     { name: "green", color: BASE_COLORS.green, label: "Green" },
     { name: "purple", color: BASE_COLORS.purple, label: "Purple" },
     { name: "orange", color: BASE_COLORS.orange, label: "Orange" },
+    // { name: "cyan", color: BASE_COLORS.cyan, label: "Cyan" },
+    // { name: "magenta", color: BASE_COLORS.magenta, label: "Magenta" },
+    // { name: "lime", color: BASE_COLORS.lime, label: "Lime" },
+    // { name: "pink", color: BASE_COLORS.pink, label: "Pink" },
+    // { name: "turquoise", color: BASE_COLORS.turquoise, label: "Turquoise" },
+    // { name: "coral", color: BASE_COLORS.coral, label: "Coral" },
   ];
 
-  // Smart color selection based on target color hue and color theory
+  // Smart color selection based on target color hue and saturation
   let primaryColors: typeof availableColors = [];
   let secondaryColors: typeof availableColors = [];
 
@@ -329,7 +356,7 @@ export function generateColorPalette(targetColor: ColorRGB) {
       ["purple", "blue", "red"].includes(c.name),
     );
     secondaryColors = availableColors.filter((c) =>
-      ["green", "yellow", "orange"].includes(c.name),
+      ["blue", "purple", "cyan", "magenta"].includes(c.name),
     );
   }
   // For orange colors (15-45°)
@@ -341,9 +368,8 @@ export function generateColorPalette(targetColor: ColorRGB) {
       ["green", "blue", "purple"].includes(c.name),
     );
   }
-  // Default: use complementary colors based on color theory
+  // Default fallback
   else {
-    // For any other hue, use colors that can create a wider range
     primaryColors = availableColors.filter((c) =>
       ["red", "yellow", "blue"].includes(c.name),
     );
@@ -352,7 +378,7 @@ export function generateColorPalette(targetColor: ColorRGB) {
     );
   }
 
-  // Ensure we have enough colors
+  // Ensure we have enough colors with enhanced fallbacks
   if (primaryColors.length < 2) {
     primaryColors = availableColors.filter((c) =>
       ["red", "yellow", "blue"].includes(c.name),

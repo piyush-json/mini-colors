@@ -293,7 +293,7 @@ export const ColorMixingGame = ({
               ? Math.floor((Date.now() - state.startTime) / 1000)
               : 0;
             onScoreSubmit(
-              attempt.matchPercentage,
+              attempt.finalScore,
               timeTaken,
               targetColorHex || targetColor || undefined,
               mixedColorHex,

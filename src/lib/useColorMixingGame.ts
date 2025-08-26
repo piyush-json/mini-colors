@@ -134,7 +134,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
     const attempt = sdk.submitMix();
 
     if (isMultiplayer && onScoreSubmit && attempt) {
-      onScoreSubmit(attempt.matchPercentage, attempt.timeTaken);
+      onScoreSubmit(attempt.finalScore, attempt.timeTaken);
     }
 
     // Save attempt to database (only for daily mode)
@@ -157,8 +157,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
             capturedColor: mixedColorHex,
             similarity: attempt.matchPercentage,
             timeTaken: attempt.timeTaken,
-            timeScore: 0,
-            finalScore: attempt.matchPercentage,
+            timeScore: 0, // This will be calculated on the server
             date: new Date().toISOString().split("T")[0],
             gameType: "color-mixing", // Add gameType field for mixing game
           }),

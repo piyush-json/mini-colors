@@ -73,11 +73,11 @@ export const LobbyDialog = ({
   console.log(isCurrentUserDenner, onStartNextRound, onEndSession);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white border border-black rounded-[34px] p-10 max-w-md mx-auto shadow-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex flex-col gap-8">
+      <DialogContent className="bg-white border border-black rounded-[34px] p-10 w-[80vw] max-w-sm mx-auto shadow-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex flex-col gap-8 w-full">
           {/* Room header */}
           <div className="text-center">
-            <h1 className="font-hartone text-[32px] leading-[35px] text-black mb-2">
+            <h1 className="font-hartone text-[32px] leading-[35px] tracking-wider font-thin text-black">
               Room: {gameInfo.roomId}
             </h1>
 
@@ -99,13 +99,13 @@ export const LobbyDialog = ({
           </div>
 
           {/* Top Section: Players (Round 1) or Leaderboard (Other Rounds) */}
-          <div className="w-full">
+          <div className="w-full flex flex-col gap-2">
             {isRound1 ? (
               <div className="w-full flex flex-col items-center">
-                <h3 className="font-hartone text-[20px] leading-[22px] text-black mb-4">
+                <h3 className="font-hartone text-[20px] leading-[22px] text-black  tracking-wider font-thin ">
                   Players ({gameInfo.playerCount}/{gameInfo.maxPlayers})
                 </h3>
-                <div className="grid grid-cols-1 gap-1 w-full">
+                <div className="grid grid-cols-1 gap-1 w-full max-h-[200px] overflow-y-auto">
                   {gameInfo.players?.map((player: any) => {
                     return (
                       <div

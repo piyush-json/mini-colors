@@ -301,9 +301,6 @@ export const useColorGame = (
               const userId = getUserId();
               const userName = getUserName();
 
-              // Use only color similarity score (no time factor)
-              const finalScore = score;
-
               await fetch("/api/game/attempt", {
                 method: "POST",
                 headers: {
@@ -314,9 +311,9 @@ export const useColorGame = (
                   userName,
                   targetColor: gameState.targetColor,
                   capturedColor: capturedColorRGB,
-                  similarity: score,
-                  timeTaken: timeTakenMs,
-                  finalScore: finalScore, // Use only color similarity score
+                  similarity: result.similarity, // Send similarity percentage
+                  timeTaken: timer, // Send time in seconds
+                  timeScore: 0, // Will be calculated on server
                   date: new Date().toISOString().split("T")[0],
                   gameType: "finding",
                 }),

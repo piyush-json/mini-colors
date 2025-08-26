@@ -42,8 +42,17 @@ export function getDailyColorFromDate(date?: Date): {
   saturation: number;
   lightness: number;
 } {
+  // return this color 2856f5 hsl(226, 91%, 55%)
+
   const today = date || new Date();
   const dateString = today.toISOString().split("T")[0]; // YYYY-MM-DD format
+  return {
+    color: "hsl(226, 91%, 55%)",
+    date: dateString,
+    hue: parseInt("226"),
+    saturation: parseInt("91"),
+    lightness: parseInt("55"),
+  };
 
   // Generate different seeds for each color component with additional entropy
   const hueSeed = hashString(dateString + "_hue_daily_color");

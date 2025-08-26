@@ -427,7 +427,7 @@ export const MultiplayerPartyScreen = () => {
         <div className="min-h-screen bg-[#FFFFE7] w-full pb-8">
           {/* Room info header */}
           <div className="text-center mb-4">
-            <h1 className="font-hartone text-[20px] text-black">
+            <h1 className="font-hartone text-[20px] text-black tracking-wider font-thin">
               Room: {gameInfo.roomId} • Round {gameInfo.currentRound}
             </h1>
           </div>

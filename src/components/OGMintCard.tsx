@@ -126,7 +126,7 @@ export const OGMintCard = ({
             lineHeight: "42px",
           }}
         >
-          {similarity}%
+          {similarity.toFixed(2)}%
         </span>
         <span
           style={{

@@ -3,6 +3,7 @@ import { getDailyColorFromDate } from "./utils";
 import {
   calculateDeltaE,
   calculatePercentageMatch,
+  calculateFinalScore,
 } from "./color-mixing-utils";
 
 const lab = converter("lab");
@@ -161,7 +162,8 @@ export class ColorSDK {
   }
 
   /**
-   * Calculate game score based on color similarity only (no time factor)
+   * Calculate game score based on color similarity and time factor
+   * 85% color accuracy + 15% time factor (more time reduces score)
    */
   static calculateScore(
     targetColor: string,
@@ -176,25 +178,24 @@ export class ColorSDK {
     const capturedRgb = this.parseColor(capturedColor);
 
     if (!targetRgb || !capturedRgb) {
-      // Fallback to RGB distance if color parsing fails
       const deltaE = this.calculateColorSimilarity(targetColor, capturedColor);
       const matchPercentage = calculatePercentageMatch(deltaE);
+
+      const finalScore = calculateFinalScore(matchPercentage, timeTaken);
 
       return {
         targetColor,
         capturedColor,
         similarity: Math.round(matchPercentage),
-        finalScore: Math.round(matchPercentage),
+        finalScore: Math.round(finalScore),
         timeTaken: Math.round(timeTaken * 100) / 100,
       };
     }
 
-    // Use exact same calculation as color mixing game
     const deltaE = calculateDeltaE(targetRgb, capturedRgb);
     const matchPercentage = calculatePercentageMatch(deltaE);
 
-    // Score is purely based on color similarity, no time factor
-    const finalScore = matchPercentage;
+    const finalScore = calculateFinalScore(matchPercentage, timeTaken);
 
     return {
       targetColor,

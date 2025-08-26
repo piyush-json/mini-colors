@@ -80,7 +80,7 @@ export const MintCard = ({
       {/* Score Section */}
       <div className="flex flex-col items-center gap-4 mt-2">
         <span className="font-hartone text-[54px] font-normal text-black leading-[42px]">
-          {similarity}%
+          {similarity.toFixed(2)}%
         </span>
         <span className="font-sintony text-2xl font-normal text-black leading-4">
           It&apos;s a Match!

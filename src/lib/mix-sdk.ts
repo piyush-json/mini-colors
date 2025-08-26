@@ -4,6 +4,7 @@ import {
   generateColorPalette,
   calculateDeltaE,
   calculatePercentageMatch,
+  calculateFinalScore,
   rgbToHex,
   ColorPercentages,
   ColorRGB,
@@ -17,6 +18,7 @@ export interface ColorMixingAttempt {
   timeTaken: number;
   matchPercentage: number;
   deltaE: number;
+  finalScore: number;
 }
 
 export interface ColorMixingChallenge {
@@ -188,9 +190,8 @@ export class ColorMixingSDK {
         createdAt: Date.now(),
       };
       const solution = this.findOptimalSolution(targetColor, palette);
-      console.log(solution);
+      console.log(solution, palette);
     } else {
-      console.log("Generating solvable challenge...");
       let attempts = 0;
       const maxAttempts = 100;
       let foundSolvable = false;
@@ -258,6 +259,14 @@ export class ColorMixingSDK {
       white: 0,
       black: 0,
     };
+
+    // Debug: Log the actual colors being assigned
+    console.log("🎨 Challenge colors assigned:", {
+      color1: challenge.palette.color1,
+      color2: challenge.palette.color2,
+      distractor: challenge.palette.distractor,
+      targetColor: challenge.targetColor,
+    });
     this.state.mixedColor = { r: 255, g: 255, b: 255 };
     this.state.showResults = false;
     this.state.lastScore = null;
@@ -308,7 +317,6 @@ export class ColorMixingSDK {
   }
 
   submitMix(): ColorMixingAttempt | null {
-    console.log("Submitting mix...");
     if (!this.state.currentChallenge || !this.state.startTime) return null;
 
     const timeTaken = Math.floor((Date.now() - this.state.startTime) / 1000);
@@ -317,6 +325,7 @@ export class ColorMixingSDK {
       this.state.mixedColor,
     );
     const matchPercentage = calculatePercentageMatch(deltaE);
+    const finalScore = calculateFinalScore(matchPercentage, timeTaken);
 
     const attempt: ColorMixingAttempt = {
       targetColor: this.state.currentChallenge.targetColor,
@@ -326,11 +335,12 @@ export class ColorMixingSDK {
       timeTaken,
       matchPercentage,
       deltaE,
+      finalScore,
     };
 
     this.state.attempts.push(attempt);
     this.state.showResults = true;
-    this.state.lastScore = matchPercentage;
+    this.state.lastScore = finalScore; // Use finalScore instead of matchPercentage
     this.state.isPlaying = false;
 
     this.notify();
@@ -346,6 +356,7 @@ export class ColorMixingSDK {
         this.state.mixedColor.b,
       ),
       matchPercentage,
+      finalScore,
       timeTaken,
     });
     return attempt;
@@ -396,7 +407,7 @@ export class ColorMixingSDK {
       };
     }
 
-    const scores = attempts.map((a) => a.matchPercentage);
+    const scores = attempts.map((a) => a.finalScore);
     const times = attempts.map((a) => a.timeTaken);
 
     return {

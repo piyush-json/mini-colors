@@ -164,13 +164,13 @@ export const TimerDisplay = ({
         </div>
       )}
 
-      {showUrgencyMessage && urgencyLevel === "critical" && (
+      {/* {showUrgencyMessage && urgencyLevel === "critical" && (
         <div className="mt-2 text-center">
           <p className="font-sintony text-[12px] text-red-600 animate-bounce">
             ⚡ Hurry up! Time is running out!
           </p>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

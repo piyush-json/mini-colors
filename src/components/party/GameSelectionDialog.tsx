@@ -36,7 +36,7 @@ export const GameSelectionDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white border border-black rounded-[34px] p-10 max-w-sm mx-auto shadow-lg">
+      <DialogContent className="bg-white border border-black rounded-[34px] p-10 w-[80vw] max-w-sm mx-auto shadow-lg">
         <div className="flex flex-col gap-[42px]">
           {/* Header */}
           <div className="text-center space-y-3">

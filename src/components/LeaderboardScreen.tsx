@@ -212,7 +212,7 @@ export const LeaderboardScreen = () => {
                   </p>
 
                   <p className="font-hartone text-[16px] text-black tracking-[7.5%] ml-auto">
-                    {player.score}%
+                    {player.score}
                   </p>
                 </div>
               </div>

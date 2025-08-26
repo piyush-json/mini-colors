@@ -87,7 +87,7 @@ export const RoundTransitionDialog = ({
 
                     {/* Player Info */}
                     <div className="flex items-center gap-1 px-2 flex-1">
-                      <div className="w-6 h-6 rounded-full bg-gray-300 border border-black overflow-hidden">
+                      {/* <div className="w-6 h-6 rounded-full bg-gray-300 border border-black overflow-hidden">
                         {pfpUrl ? (
                           <img
                             src={pfpUrl}
@@ -97,7 +97,7 @@ export const RoundTransitionDialog = ({
                         ) : (
                           <div className="w-full h-full bg-gray-300"></div>
                         )}
-                      </div>
+                      </div> */}
                       <span className="font-sintony text-[12px] text-black tracking-wider">
                         {player.name}
                       </span>
@@ -106,7 +106,7 @@ export const RoundTransitionDialog = ({
                     {/* Score */}
                     <div className="px-4">
                       <span className="font-hartone text-[16px] text-black tracking-wider">
-                        {player.sessionScore}%
+                        {player.sessionScore}
                       </span>
                     </div>
                   </div>
