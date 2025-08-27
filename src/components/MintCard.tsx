@@ -56,29 +56,27 @@ export const MintCard = ({
   return (
     <div
       id="mintit"
-      className="w-full h-[400px] bg-white border-[3px] border-black rounded-[12px] mx-auto flex flex-col items-center relative overflow-hidden p-8 pt-[15%]"
+      className="w-full h-[400px] bg-white border-[3px] border-black rounded-[12px] mx-auto flex flex-col items-center relative overflow-hidden p-8 pt-[17%]"
       style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
     >
       {/* Header Section */}
-      <div className="flex justify-between items-start left-8 top-8  absolute ">
+      <div className="flex flex-col justify-between items-start left-8 top-8  absolute ">
         {/* Date and Username */}
-        <div className="flex flex-col gap-1">
-          <span className="font-sintony text-sm font-semibold text-black">
-            {new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              timeZone: "UTC",
-            })}
-          </span>
-          <span className="font-sintony text-sm font-normal text-gray-700">
-            @{userName}
-          </span>
-        </div>
+        <span className="font-sintony text-sm font-semibold text-black">
+          {new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC",
+          })}
+        </span>
+        <span className="font-sintony text-sm font-normal text-gray-700">
+          @{userName}
+        </span>
       </div>
 
       {/* Score Section */}
-      <div className="flex flex-col items-center gap-4 mt-2">
+      <div className="flex flex-col items-center gap-4 mt-4">
         <span className="font-hartone text-[54px] font-normal text-black leading-[42px]">
           {similarity.toFixed(2)}%
         </span>
