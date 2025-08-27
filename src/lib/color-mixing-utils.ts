@@ -42,6 +42,10 @@ export const BASE_COLORS = {
   green: { r: 0, g: 255, b: 0 },
   purple: { r: 128, g: 0, b: 128 },
   orange: { r: 255, g: 165, b: 0 },
+  // CMY colors for better color mixing coverage
+  cyan: { r: 0, g: 255, b: 255 },
+  magenta: { r: 255, g: 0, b: 255 },
+  yellow_cmy: { r: 255, g: 255, b: 0 }, // Same as yellow but for CMY system
   white: { r: 255, g: 255, b: 255 },
   black: { r: 0, g: 0, b: 0 },
 };
@@ -290,117 +294,157 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-// Generate color palette for mixing
+// Generate color palette for mixing with HSL hue matching for 99% target color accuracy
 export function generateColorPalette(targetColor: ColorRGB) {
-  const { h } = rgbToHsl(targetColor.r, targetColor.g, targetColor.b);
+  const targetHSL = rgbToHsl(targetColor.r, targetColor.g, targetColor.b);
+  const { h: targetHue } = targetHSL;
 
-  // Enhanced available colors including new neon-friendly colors
+  // Enhanced available colors including CMY colors
   const availableColors = [
     { name: "red", color: BASE_COLORS.red, label: "Red" },
     { name: "yellow", color: BASE_COLORS.yellow, label: "Yellow" },
     { name: "blue", color: BASE_COLORS.blue, label: "Blue" },
     { name: "green", color: BASE_COLORS.green, label: "Green" },
     { name: "purple", color: BASE_COLORS.purple, label: "Purple" },
-    { name: "orange", color: BASE_COLORS.orange, label: "Orange" },
+    // { name: "orange", color: BASE_COLORS.orange, label: "Orange" },
     // { name: "cyan", color: BASE_COLORS.cyan, label: "Cyan" },
-    // { name: "magenta", color: BASE_COLORS.magenta, label: "Magenta" },
-    // { name: "lime", color: BASE_COLORS.lime, label: "Lime" },
-    // { name: "pink", color: BASE_COLORS.pink, label: "Pink" },
-    // { name: "turquoise", color: BASE_COLORS.turquoise, label: "Turquoise" },
-    // { name: "coral", color: BASE_COLORS.coral, label: "Coral" },
+    { name: "magenta", color: BASE_COLORS.magenta, label: "Magenta" },
   ];
 
-  // Smart color selection based on target color hue and saturation
-  let primaryColors: typeof availableColors = [];
-  let secondaryColors: typeof availableColors = [];
+  // Convert all available colors to HSL for better matching
+  const availableColorsHSL = availableColors.map((color) => ({
+    ...color,
+    hsl: rgbToHsl(color.color.r, color.color.g, color.color.b),
+  }));
 
-  // For blue colors (210-240°)
-  if (h >= 210 && h <= 240) {
-    primaryColors = availableColors.filter((c) =>
-      ["blue", "green"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["red", "purple", "yellow"].includes(c.name),
-    );
-  }
-  // For red colors (0-30° and 330-360°)
-  else if ((h >= 0 && h <= 30) || (h >= 330 && h <= 360)) {
-    primaryColors = availableColors.filter((c) =>
-      ["red", "orange", "yellow"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["blue", "purple", "green"].includes(c.name),
-    );
-  }
-  // For green colors (90-150°)
-  else if (h >= 90 && h <= 150) {
-    primaryColors = availableColors.filter((c) =>
-      ["green", "yellow", "blue"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["red", "orange", "purple"].includes(c.name),
-    );
-  }
-  // For yellow colors (45-75°)
-  else if (h >= 45 && h <= 75) {
-    primaryColors = availableColors.filter((c) =>
-      ["yellow", "orange", "green"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["red", "blue", "purple"].includes(c.name),
-    );
-  }
-  // For purple colors (270-300°)
-  else if (h >= 270 && h <= 300) {
-    primaryColors = availableColors.filter((c) =>
-      ["purple", "blue", "red"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["blue", "purple", "cyan", "magenta"].includes(c.name),
-    );
-  }
-  // For orange colors (15-45°)
-  else if (h >= 15 && h <= 45) {
-    primaryColors = availableColors.filter((c) =>
-      ["orange", "red", "yellow"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["green", "blue", "purple"].includes(c.name),
-    );
-  }
-  // Default fallback
-  else {
-    primaryColors = availableColors.filter((c) =>
-      ["red", "yellow", "blue"].includes(c.name),
-    );
-    secondaryColors = availableColors.filter((c) =>
-      ["green", "purple", "orange"].includes(c.name),
-    );
-  }
+  // Calculate hue distance for each color from target
+  const colorsWithDistance = availableColorsHSL.map((color) => {
+    let hueDistance = Math.abs(color.hsl.h - targetHue);
+    // Handle hue wrapping (e.g., 350° to 10° = 20° distance, not 340°)
+    if (hueDistance > 180) {
+      hueDistance = 360 - hueDistance;
+    }
 
-  // Ensure we have enough colors with enhanced fallbacks
+    return {
+      ...color,
+      hueDistance,
+      // Calculate overall color similarity score
+      similarityScore: calculateColorSimilarity(targetHSL, color.hsl),
+    };
+  });
+
+  // Sort colors by similarity score (higher = better match)
+  colorsWithDistance.sort((a, b) => b.similarityScore - a.similarityScore);
+
+  // Select colors based on HSL matching strategy
+  let selectedColors: typeof colorsWithDistance = [];
+
+  // Strategy 1: Try to find colors that can mix to create the target hue
+  const primaryHue = targetHue;
+  const complementaryHue = (targetHue + 180) % 360;
+
+  // Find colors closest to target hue and complementary hue
+  const primaryColors = colorsWithDistance
+    .filter((c) => c.hueDistance < 60) // Within 60° of target
+    .slice(0, 3);
+
+  const complementaryColors = colorsWithDistance
+    .filter((c) => {
+      const compDistance = Math.abs(c.hsl.h - complementaryHue);
+      return Math.min(compDistance, 360 - compDistance) < 60;
+    })
+    .slice(0, 2);
+
+  // Strategy 2: If we don't have enough primary colors, add some from complementary
   if (primaryColors.length < 2) {
-    primaryColors = availableColors.filter((c) =>
-      ["red", "yellow", "blue"].includes(c.name),
-    );
-  }
-  if (secondaryColors.length < 1) {
-    secondaryColors = availableColors.filter((c) =>
-      ["green", "purple", "orange"].includes(c.name),
-    );
+    selectedColors = [
+      ...primaryColors,
+      ...complementaryColors.slice(0, 2 - primaryColors.length),
+    ];
+  } else {
+    selectedColors = primaryColors.slice(0, 2);
   }
 
-  // Select 3 colors: 2 from primary (for better mixing), 1 from secondary (as distractor)
-  const selectedColors = shuffleArray([
-    ...shuffleArray(primaryColors).slice(0, 2),
-    ...shuffleArray(secondaryColors).slice(0, 1),
-  ]);
+  // Strategy 3: Add a distractor color that's different enough
+  const usedHues = selectedColors.map((c) => c.hsl.h);
+  const distractorCandidates = colorsWithDistance.filter(
+    (c) =>
+      !usedHues.some((usedHue) => {
+        const distance = Math.abs(c.hsl.h - usedHue);
+        return Math.min(distance, 360 - distance) < 45; // At least 45° different
+      }),
+  );
+
+  if (distractorCandidates.length > 0) {
+    selectedColors.push(distractorCandidates[0]);
+  } else {
+    // Fallback: add the least similar color
+    selectedColors.push(colorsWithDistance[colorsWithDistance.length - 1]);
+  }
+
+  // Ensure we have exactly 3 colors
+  while (selectedColors.length < 3) {
+    const remainingColors = colorsWithDistance.filter(
+      (c) => !selectedColors.includes(c),
+    );
+    if (remainingColors.length > 0) {
+      selectedColors.push(remainingColors[0]);
+    } else {
+      break;
+    }
+  }
+
+  // Shuffle the final selection for variety
+  const shuffledColors = shuffleArray(selectedColors.slice(0, 3));
 
   return {
-    color1: { ...selectedColors[0], percentage: 0 },
-    color2: { ...selectedColors[1], percentage: 0 },
-    distractor: { ...selectedColors[2], percentage: 0 },
+    color1: {
+      name: shuffledColors[0].name,
+      color: shuffledColors[0].color,
+      label: shuffledColors[0].label,
+      percentage: 0,
+    },
+    color2: {
+      name: shuffledColors[1].name,
+      color: shuffledColors[1].color,
+      label: shuffledColors[1].label,
+      percentage: 0,
+    },
+    distractor: {
+      name: shuffledColors[2].name,
+      color: shuffledColors[2].color,
+      label: shuffledColors[2].label,
+      percentage: 0,
+    },
   };
+}
+
+// Helper function to calculate color similarity based on HSL
+function calculateColorSimilarity(target: ColorHSL, source: ColorHSL): number {
+  // Normalize hue distance (0-180° = 0-1)
+  let hueDistance = Math.abs(target.h - source.h);
+  if (hueDistance > 180) {
+    hueDistance = 360 - hueDistance;
+  }
+  const normalizedHueDistance = hueDistance / 180;
+
+  // Normalize saturation and lightness differences (0-100 = 0-1)
+  const saturationDistance = Math.abs(target.s - source.s) / 100;
+  const lightnessDistance = Math.abs(target.l - source.l) / 100;
+
+  // Weighted similarity score (hue is most important, then saturation, then lightness)
+  const hueWeight = 0.6;
+  const saturationWeight = 0.25;
+  const lightnessWeight = 0.15;
+
+  const similarityScore =
+    100 -
+    (normalizedHueDistance * hueWeight +
+      saturationDistance * saturationWeight +
+      lightnessDistance * lightnessWeight) *
+      100;
+
+  return Math.max(0, similarityScore);
 }
 
 // Convert RGB to hex

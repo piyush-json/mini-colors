@@ -113,7 +113,7 @@ export const ColorMixingGame = ({
     if (targetColor) {
       initializeGame(targetColor, isMultiplayer);
     }
-  }, [targetColor, isMultiplayer, timeLimit, initializeGame]);
+  }, [targetColor, isMultiplayer]);
 
   useEffect(() => {
     if (gameContext && state.timer !== undefined && gameContext.updateTimer) {

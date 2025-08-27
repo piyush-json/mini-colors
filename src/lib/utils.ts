@@ -46,13 +46,15 @@ export function getDailyColorFromDate(date?: Date): {
 
   const today = date || new Date();
   const dateString = today.toISOString().split("T")[0]; // YYYY-MM-DD format
-  return {
-    color: "hsl(331, 70%, 45%)",
-    date: dateString,
-    hue: parseInt("331"),
-    saturation: parseInt("70"),
-    lightness: parseInt("45"),
-  };
+  if (dateString === "2025-08-27") {
+    return {
+      color: "hsl(331, 70%, 45%)",
+      date: dateString,
+      hue: parseInt("331"),
+      saturation: parseInt("70"),
+      lightness: parseInt("45"),
+    };
+  }
 
   // Generate different seeds for each color component with additional entropy
   const hueSeed = hashString(dateString + "_hue_daily_color");
