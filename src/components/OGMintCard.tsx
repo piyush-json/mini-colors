@@ -1,3 +1,5 @@
+import { formatTimeTaken } from "@/lib/utils";
+
 interface OGMintCardProps {
   targetColor: string;
   capturedColor: string;
@@ -45,15 +47,6 @@ const leftRightColorPalette = [
   "#BFFF00",
 ];
 
-const formatTimeTaken = (seconds: number) => {
-  if (seconds < 60) {
-    return `${seconds.toFixed(1)}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds.toFixed(1)}s`;
-};
-
 export const OGMintCard = ({
   targetColor,
   capturedColor,
@@ -82,14 +75,14 @@ export const OGMintCard = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          padding: "16px",
+          width: "100%",
+          padding: "20px",
         }}
       >
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "4px",
           }}
         >
           <span
@@ -117,19 +110,19 @@ export const OGMintCard = ({
           >
             @{userName}
           </span>
-          {timeTaken && (
-            <span
-              style={{
-                fontFamily: "system-ui",
-                fontSize: "14px",
-                fontWeight: "400",
-                color: "#374151",
-              }}
-            >
-              Time Taken: {formatTimeTaken(timeTaken)}
-            </span>
-          )}
         </div>
+        {timeTaken && (
+          <span
+            style={{
+              fontFamily: "system-ui",
+              fontSize: "14px",
+              fontWeight: "400",
+              color: "black",
+            }}
+          >
+            Time Taken: {formatTimeTaken(timeTaken)}
+          </span>
+        )}
       </div>
       <div
         style={{

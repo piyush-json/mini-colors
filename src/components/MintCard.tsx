@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, formatTimeTaken } from "@/lib/utils";
 import { ArrowLeft, ArrowRight } from "./icons";
 
 interface MintCardProps {
@@ -6,6 +6,7 @@ interface MintCardProps {
   capturedColor: string;
   similarity: number;
   userName: string;
+  timeTaken?: number;
 }
 
 const colorPalette = [
@@ -52,27 +53,35 @@ export const MintCard = ({
   capturedColor,
   similarity,
   userName,
+  timeTaken,
 }: MintCardProps) => {
   return (
     <div
       id="mintit"
-      className="w-full h-[400px] bg-white border-[3px] border-black rounded-[12px] mx-auto flex flex-col items-center relative overflow-hidden p-8 pt-[17%]"
+      className="w-full h-[400px] bg-white border-[3px] border-black rounded-[12px] mx-auto flex flex-col items-center relative overflow-hidden p-8"
       style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
     >
       {/* Header Section */}
-      <div className="flex flex-col justify-between items-start left-8 top-8  absolute ">
-        {/* Date and Username */}
-        <span className="font-sintony text-sm font-semibold text-black">
-          {new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            timeZone: "UTC",
-          })}
-        </span>
-        <span className="font-sintony text-sm font-normal text-gray-700">
-          @{userName}
-        </span>
+      <div className="flex justify-between items-start w-full">
+        <div className="flex flex-col justify-between items-start">
+          {/* Date and Username */}
+          <p className="font-sintony text-sm font-semibold text-black">
+            {new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              timeZone: "UTC",
+            })}
+          </p>
+          <p className="font-sintony text-sm font-normal text-gray-700">
+            @{userName}
+          </p>
+        </div>
+        {timeTaken && (
+          <span className="font-sintony text-sm font-semibold text-black">
+            Time Taken: {formatTimeTaken(timeTaken)}
+          </span>
+        )}
       </div>
 
       {/* Score Section */}

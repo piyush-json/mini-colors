@@ -56,6 +56,7 @@ export const ShareMintScreen = ({
           capturedColor={capturedColor}
           similarity={similarity}
           userName={getUserName()}
+          timeTaken={timeTaken}
         />
       </div>
 

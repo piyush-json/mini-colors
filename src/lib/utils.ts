@@ -75,3 +75,12 @@ export function getDailyColorFromDate(date?: Date): {
     lightness,
   };
 }
+
+export const formatTimeTaken = (seconds: number) => {
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds.toFixed(1)}s`;
+};
