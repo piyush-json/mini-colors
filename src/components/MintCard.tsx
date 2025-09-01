@@ -112,12 +112,12 @@ export const MintCard = ({
         <div className="absolute left-8 top-[40%] z-10">
           <ArrowLeft />
         </div>
-        <div className="absolute right-14 top-[50%] z-10">
+        <div className="absolute right-14 top-[40%] z-10">
           <ArrowRight />
         </div>
 
         {/* Captured Color Circle */}
-        <div className="flex flex-col items-end gap-2 absolute right-10 top-10 z-1">
+        <div className="flex flex-col items-end gap-2 absolute right-10 top-4 z-1">
           <div
             className="w-[120px] h-[120px] border border-black rounded-[19px] transform rotate-6"
             style={{ backgroundColor: capturedColor }}

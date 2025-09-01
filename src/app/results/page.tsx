@@ -53,6 +53,7 @@ export default function ResultsPage() {
         capturedColor: convertToHex(results.capturedColor),
         similarity: results.similarity,
         userName: getUserName(),
+        timeTaken: results.timeTaken,
         date: new Date().toLocaleDateString("en-US", {
           year: "numeric",
           month: "short",
@@ -62,7 +63,11 @@ export default function ResultsPage() {
       };
       const shareUrl = generateFarcasterShareUrl(shareData);
       console.log("Share URL:", shareUrl);
-      await sdk.actions.composeCast({
+      // await sdk.actions.composeCast({
+      //   text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score?`,
+      //   embeds: [shareUrl],
+      // });
+      await composeCast({
         text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score?`,
         embeds: [shareUrl],
       });
