@@ -97,7 +97,7 @@ export const RoundFinishedScreen = ({
       {!isCurrentUserDenner && (
         <div className="text-center py-4">
           <p className="font-sintony text-[16px] text-black">
-            Waiting for denner <strong>{gameInfo.dennerName}</strong> to
+            Waiting for host <strong>{gameInfo.dennerName}</strong> to
             continue...
           </p>
         </div>

@@ -49,7 +49,7 @@ export const GameLobby = ({
         <div className="font-sintony text-[16px] text-black">
           {isCurrentUserDenner
             ? "Select a game type to start Round 1"
-            : `Waiting for denner ${gameInfo.dennerName} to select game type`}
+            : `Waiting for Host ${gameInfo.dennerName} to select game type`}
         </div>
       </div>
 
@@ -85,7 +85,7 @@ export const GameLobby = ({
           ) : (
             <div className="text-center py-8">
               <p className="font-sintony text-[16px] text-black">
-                Waiting for denner <strong>{gameInfo.dennerName}</strong> to
+                Waiting for host <strong>{gameInfo.dennerName}</strong> to
                 select game type...
               </p>
             </div>

@@ -41,7 +41,7 @@ export const GameSelectionDialog = ({
           {/* Header */}
           <div className="text-center space-y-3">
             <h2 className="font-hartone font-extralight text-[44px] leading-[42px] text-black">
-              You are the denner
+              You are the host
             </h2>
             <p className="font-sintony text-[14px] leading-[20px] text-black">
               Select which game you want to go with for round {roundNumber}

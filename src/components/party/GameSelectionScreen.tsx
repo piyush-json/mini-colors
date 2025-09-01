@@ -28,7 +28,7 @@ export const GameSelectionScreen = ({
       {isCurrentUserDenner ? (
         <div className="space-y-4">
           <p className="font-sintony text-[16px] text-black text-center mb-6">
-            As the denner, choose the game type for this round:
+            As the host, choose the game type for this round:
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -53,7 +53,7 @@ export const GameSelectionScreen = ({
         <div className="text-center py-8">
           <div className="w-12 h-12 mx-auto mb-4 border-2 border-black rounded-full border-t-transparent animate-spin"></div>
           <p className="font-sintony text-[16px] text-black">
-            Waiting for denner <strong>{gameInfo.dennerName}</strong> to choose
+            Waiting for host <strong>{gameInfo.dennerName}</strong> to choose
             the next game...
           </p>
         </div>
@@ -78,7 +78,7 @@ export const GameSelectionScreen = ({
                   {player.name}
                   {player.id === gameInfo.dennerId && (
                     <span className="ml-2 text-[12px] bg-[#FFE254] border border-black px-2 py-1 rounded-full font-hartone">
-                      DENNER
+                      HOST
                     </span>
                   )}
                 </span>

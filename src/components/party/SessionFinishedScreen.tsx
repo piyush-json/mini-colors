@@ -94,7 +94,7 @@ export const SessionFinishedScreen = ({
 
         <div className="text-center py-4">
           <p className="font-sintony text-[16px] text-black">
-            Session ended! Waiting for denner{" "}
+            Session ended! Waiting for host{" "}
             <strong>{gameInfo.dennerName}</strong>...
           </p>
           <button

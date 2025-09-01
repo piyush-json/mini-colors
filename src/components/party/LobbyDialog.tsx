@@ -182,7 +182,7 @@ export const LobbyDialog = ({
             </div>
           ) : (
             <div className="text-center text-black">
-              {`Waiting for denner ${gameInfo.dennerName} to start next round`}
+              {`Waiting for host ${gameInfo.dennerName} to start next round`}
             </div>
           )}
         </div>

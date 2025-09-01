@@ -127,7 +127,7 @@ export const MultiplayerPartyScreen = () => {
                 : "changed";
 
           console.log(
-            `🔄 Denner changed to ${data.dennerName} (previous denner ${reasonText})`,
+            `🔄 Host changed to ${data.dennerName} (previous host ${reasonText})`,
           );
           break;
 
