@@ -220,6 +220,7 @@ export const LeaderboardScreen = () => {
           </div>
         )}
       </div>
+      <div className="h-4"></div>
     </div>
   );
 };

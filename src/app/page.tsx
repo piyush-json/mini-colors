@@ -108,42 +108,52 @@ export default function HomePage() {
         </Button>
 
         <div className="flex gap-3">
-          <Link href="/party" className="flex-1">
+          <Link
+            href="/party"
+            className="flex-1 flex flex-col items-center gap-2"
+          >
             <div
               className="w-full h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
               style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
             >
               <PartyIcon />
-              {/* <span className="text-[18px] leading-[18px] sm:leading-[20px] tracking-[1.2px] sm:tracking-[1.35px] text-black font-normal font-hartone">
-                PARTY MODE
-              </span> */}
             </div>
+            <span className="text-[12px] leading-[16px] text-black font-sintony">
+              Party
+            </span>
           </Link>
 
-          {/* Practice Button */}
-          <button
-            className="w-full flex-1 h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
-            style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
-            onClick={handlePracticeClick}
+          <Link
+            href="/leaderboard"
+            className="flex-1 flex flex-col items-center gap-2"
           >
-            <Practice />
-          </button>
-          <Link href="/leaderboard" className="flex-1">
             <div
               className="w-full h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
               style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
             >
               <LeaderBoard />
-              {/* <span className="text-[18px] leading-[18px] sm:leading-[20px] tracking-[1.2px] sm:tracking-[1.35px] text-black font-normal font-hartone">
-                LEADERBOARD
-              </span> */}
             </div>
+            <span className="text-[12px] leading-[16px] text-black font-sintony">
+              Leaderboard
+            </span>
           </Link>
+          <div className="flex-1 flex flex-col items-center gap-2">
+            <button
+              className="w-full flex-1 h-[52px] bg-white border border-black rounded-[39px] flex items-center justify-center gap-2 px-4"
+              style={{ boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)" }}
+              onClick={handlePracticeClick}
+            >
+              <Practice />
+            </button>
+            <span className="text-[12px] leading-[16px] text-black font-sintony">
+              Practice
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Bottom spacing */}
-      <div className="h-8"></div>
+      <div className="h-4"></div>
     </>
   );
 }
