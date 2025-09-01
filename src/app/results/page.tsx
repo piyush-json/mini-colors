@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShareMintScreen } from "@/components/ShareMintScreen";
 import { SuccessDialog } from "@/components/SuccessDialog";
 import { useGameResults } from "@/lib/GameResultsContext";
-import { useComposeCast, useMiniKit } from "@coinbase/onchainkit/minikit";
+// import { useComposeCast } from "@coinbase/onchainkit/minikit";
 import sdk from "@farcaster/miniapp-sdk";
 import html2canvas from "html2canvas";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
@@ -17,9 +17,20 @@ import { rgbOrHslToHex } from "@/lib/color-mixing-utils";
 export default function ResultsPage() {
   const router = useRouter();
   const { results, clearResults, setGameMode } = useGameResults();
-  const { composeCastAsync: composeCast } = useComposeCast();
+  // const { composeCastAsync: composeCast } = useComposeCast();
   const { getUserName } = useMiniKitUser();
-  const { mint, isPending: isMinting, address } = useMintNFT();
+  const {
+    mint,
+    isPending: isMinting,
+    address,
+  } = useMintNFT({
+    onSuccess: () => {
+      setShowSuccessDialog(true);
+    },
+    onError: () => {
+      alert("Failed to mint NFT. Please try again.");
+    },
+  });
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   useEffect(() => {
@@ -63,11 +74,7 @@ export default function ResultsPage() {
       };
       const shareUrl = generateFarcasterShareUrl(shareData);
       console.log("Share URL:", shareUrl);
-      // await sdk.actions.composeCast({
-      //   text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score?`,
-      //   embeds: [shareUrl],
-      // });
-      await composeCast({
+      await sdk.actions.composeCast({
         text: `Just scored ${results.similarity}% in the color matching game! 🎨 Can you beat my score?`,
         embeds: [shareUrl],
       });
@@ -156,9 +163,6 @@ export default function ResultsPage() {
       await mint(metadataUri, getMintCost());
 
       // Show success dialog after successful mint
-      setTimeout(() => {
-        setShowSuccessDialog(true);
-      }, 10000);
     } catch (error) {
       console.error("Error minting NFT:", error);
       alert("Failed to mint NFT. Please try again.");
