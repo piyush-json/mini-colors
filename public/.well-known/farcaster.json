@@ -22,5 +22,8 @@
     "ogTitle": "Play Shade",
     "ogDescription": "Find colours and compete with your friends.",
     "ogImageUrl": "https://playshade.fun/hero.png"
+  },
+  "baseBuilder": {
+    "allowedAddresses": ["0xDB295A21b743EC94744bF78b6cCd60c89398201E"]
   }
 }
