@@ -4,6 +4,7 @@ export interface ShareData {
   similarity: number;
   userName: string;
   date?: string;
+  timeTaken?: number; // Time taken in seconds
 }
 
 // Simple encoding to reduce length and make it less obvious
@@ -13,9 +14,10 @@ function encodeShareData(data: ShareData): string {
   const cc = data.capturedColor.replace("#", "");
   const s = data.similarity.toString(36); // base36 for shorter numbers
   const u = btoa(data.userName).replace(/[=+/]/g, ""); // base64 without padding chars
+  const t = data.timeTaken ? data.timeTaken.toString(36) : ""; // base36 for time taken
 
   // Pack everything into a compact string with separators
-  return `${tc}-${cc}-${s}-${u}`;
+  return `${tc}-${cc}-${s}-${u}${t ? `-${t}` : ""}`;
 }
 
 // Decode the compact string back to ShareData
@@ -24,17 +26,24 @@ function decodeShareData(encoded: string): ShareData | null {
     const parts = encoded.split("-");
     if (parts.length < 4) return null;
 
-    const [tc, cc, s, u] = parts;
+    // Handle both old format (4 parts) and new format (5 parts)
+    const [tc, cc, s, u, t] = parts;
 
     // Restore padding for base64 decode if needed
     const paddedU = u + "=".repeat((4 - (u.length % 4)) % 4);
 
-    return {
+    const result: ShareData = {
       targetColor: `#${tc}`,
       capturedColor: `#${cc}`,
       similarity: parseInt(s, 36), // parse from base36
       userName: atob(paddedU),
     };
+
+    if (parts.length >= 5 && t) {
+      result.timeTaken = parseInt(t, 36);
+    }
+
+    return result;
   } catch (error) {
     console.error("Failed to decode share data:", error);
     return null;

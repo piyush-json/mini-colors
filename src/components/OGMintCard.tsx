@@ -3,6 +3,7 @@ interface OGMintCardProps {
   capturedColor: string;
   similarity: number;
   userName: string;
+  timeTaken?: number;
 }
 
 const colorPalette = [
@@ -44,11 +45,21 @@ const leftRightColorPalette = [
   "#BFFF00",
 ];
 
+const formatTimeTaken = (seconds: number) => {
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds.toFixed(1)}s`;
+};
+
 export const OGMintCard = ({
   targetColor,
   capturedColor,
   similarity,
   userName,
+  timeTaken,
 }: OGMintCardProps) => {
   return (
     <div
@@ -106,6 +117,18 @@ export const OGMintCard = ({
           >
             @{userName}
           </span>
+          {timeTaken && (
+            <span
+              style={{
+                fontFamily: "system-ui",
+                fontSize: "14px",
+                fontWeight: "400",
+                color: "#374151",
+              }}
+            >
+              Time Taken: {formatTimeTaken(timeTaken)}
+            </span>
+          )}
         </div>
       </div>
       <div
@@ -114,7 +137,6 @@ export const OGMintCard = ({
           flexDirection: "column",
           alignItems: "center",
           gap: "16px",
-          marginTop: "8px",
         }}
       >
         <span

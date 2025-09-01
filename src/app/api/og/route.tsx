@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
       return new Response("Missing or invalid data parameter", { status: 400 });
     }
 
-    const { targetColor, capturedColor, similarity, userName } = shareData;
+    const { targetColor, capturedColor, similarity, userName, timeTaken } =
+      shareData;
 
     return new ImageResponse(
       (
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
               capturedColor={capturedColor}
               similarity={similarity}
               userName={userName}
+              timeTaken={timeTaken}
             />
           </div>
         </div>
