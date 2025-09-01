@@ -5,11 +5,11 @@ import { LayoutContent } from "./layout-content";
 import "@b3dotfun/sdk/index.css";
 
 export const metadata: Metadata = {
-  title: "Play Shades",
-  description: "Find the color, win the game!",
+  title: "Play Shade",
+  description: "Mix colors. Guess shades. Win the day.",
   openGraph: {
-    title: "Play Shades",
-    description: "Find the color, win the game!",
+    title: "Play Shade",
+    description: "Mix colors. Guess shades. Win the day.",
     images: [
       {
         url: `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/hero.png`,
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Play Shades",
-    description: "Find the color, win the game!",
+    title: "Play Shade",
+    description: "Mix colors. Guess shades. Win the day.",
     images: [
       `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/hero.png`,
     ],
@@ -32,10 +32,10 @@ export const metadata: Metadata = {
       version: "next",
       imageUrl: `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/hero.png`,
       button: {
-        title: "Play Shades",
+        title: "Play Shade",
         action: {
           type: "launch_frame",
-          name: "Play Shades",
+          name: "Play Shade",
           url:
             process.env.NEXT_PUBLIC_FURL ||
             process.env.NEXT_PUBLIC_URL ||
