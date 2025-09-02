@@ -1,9 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trophy, Medal, Crown, RefreshCw, AlertTriangle } from "lucide-react";
+import {
+  Trophy,
+  Medal,
+  Crown,
+  RefreshCw,
+  AlertTriangle,
+  Share2,
+  Coins,
+} from "lucide-react";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
 import { Rank1, Rank2, Rank3 } from "./icons";
+import sdk from "@farcaster/miniapp-sdk";
+import html2canvas from "html2canvas";
+import { getMintCost, useMintNFT } from "@/lib/nft-contract";
+import { generateLeaderboardShareUrl } from "@/lib/farcaster-share";
+import { SuccessDialog } from "./SuccessDialog";
 
 interface LeaderboardEntry {
   rank: string;
@@ -22,11 +35,10 @@ interface LeaderboardData {
   leaderboard: LeaderboardEntry[];
   userRanking: UserRanking | null;
   date: string;
-  total: number;
 }
 
 export const LeaderboardScreen = () => {
-  const { getUserId, isLoading: userLoading } = useMiniKitUser();
+  const { getUserId, getUserName, isLoading: userLoading } = useMiniKitUser();
   const [leaderboardData, setLeaderboardData] =
     useState<LeaderboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,13 +46,27 @@ export const LeaderboardScreen = () => {
   const [selectedGameType, setSelectedGameType] = useState<
     "all" | "color-mixing" | "finding"
   >("all");
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-  // Get user ID value to use in dependency array
+  const {
+    mint,
+    isPending: isMinting,
+    address,
+  } = useMintNFT({
+    onSuccess: () => {
+      setShowSuccessDialog(true);
+    },
+    onError: () => {
+      alert("Failed to mint NFT. Please try again.");
+    },
+  });
+
   const userId = getUserId();
 
-  // Fetch leaderboard data
   useEffect(() => {
     if (userLoading) return;
+
+    let isCancelled = false;
 
     const fetchLeaderboard = async () => {
       setIsLoading(true);
@@ -53,28 +79,188 @@ export const LeaderboardScreen = () => {
 
         if (response.ok) {
           const data = (await response.json()) as LeaderboardData;
-          setLeaderboardData(data);
+          if (!isCancelled) {
+            setLeaderboardData(data);
+          }
         } else {
           throw new Error("Failed to fetch leaderboard");
         }
       } catch (err) {
         console.error("Failed to fetch leaderboard:", err);
-        setError("Failed to load leaderboard");
-        setLeaderboardData(null);
+        if (!isCancelled) {
+          setError("Failed to load leaderboard");
+          setLeaderboardData(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchLeaderboard();
-  }, [userId, userLoading, selectedGameType]);
 
-  const handleBackToMenu = () => {
-    window.location.href = "/";
-  };
+    return () => {
+      isCancelled = true;
+    };
+  }, [userId, userLoading, selectedGameType]);
 
   const handleRefresh = () => {
     window.location.reload();
+  };
+
+  const handleShare = async () => {
+    if (!leaderboardData?.userRanking) return;
+
+    try {
+      const shareData = {
+        rank: leaderboardData.userRanking.rank,
+        score: leaderboardData.userRanking.score,
+        userName: getUserName(),
+        gameType: selectedGameType,
+        date: new Date().toISOString().split("T")[0],
+      };
+
+      const shareUrl = generateLeaderboardShareUrl(shareData, leaderboardData);
+      await sdk.actions.composeCast({
+        text: `Check out the @playshadedotfun leaderboard! I'm ranked #${leaderboardData.userRanking.rank} with ${leaderboardData.userRanking.score}%! 🏆 Can you beat my score?`,
+        embeds: [shareUrl],
+      });
+    } catch (error) {
+      console.error("Error sharing leaderboard:", error);
+      console.log("leaderboardData", leaderboardData);
+      await sdk.actions.composeCast({
+        text: `Check out the @playshadedotfun leaderboard! I'm ranked #${leaderboardData?.userRanking?.rank} with ${leaderboardData?.userRanking?.score}%! 🏆 Can you beat my score?`,
+      });
+    }
+  };
+
+  const handleMint = async () => {
+    if (!leaderboardData?.userRanking || !address) {
+      console.error("Please connect your wallet to mint an NFT.");
+      return;
+    }
+
+    try {
+      // Capture the entire leaderboard
+      const leaderboardElement = document.getElementById(
+        "leaderboard-container",
+      );
+      if (!leaderboardElement) {
+        console.error("Leaderboard element not found");
+        return;
+      }
+
+      // Take screenshot of the entire leaderboard
+      const canvas = await html2canvas(leaderboardElement, {
+        backgroundColor: "#FFFFE7",
+        scale: 2, // Higher resolution
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      // Convert canvas to base64
+      const base64Image = canvas.toDataURL("image/png");
+
+      // Prepare metadata for the leaderboard NFT
+      const gameMetadata = {
+        name: `Leaderboard Rank #${leaderboardData.userRanking.rank}`,
+        description: `${getUserName()} achieved rank #${leaderboardData.userRanking.rank} with ${leaderboardData.userRanking.score}% score on the leaderboard!`,
+        attributes: [
+          {
+            trait_type: "Rank",
+            value: leaderboardData.userRanking.rank,
+          },
+          {
+            trait_type: "Score",
+            value: leaderboardData.userRanking.score,
+          },
+          {
+            trait_type: "Game Type",
+            value: selectedGameType,
+          },
+          {
+            trait_type: "Date",
+            value: new Date().toISOString().split("T")[0],
+          },
+          {
+            trait_type: "Mode",
+            value: "leaderboard",
+          },
+        ],
+        external_url: "https://playshadedotfun.com",
+        background_color: "FFFFE7",
+      };
+
+      // Get presigned URLs for direct upload to R2
+      const presignedResponse = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "leaderboard",
+          metadata: gameMetadata,
+        }),
+      });
+
+      if (!presignedResponse.ok) {
+        throw new Error("Failed to get presigned URLs");
+      }
+
+      const { imageUploadUrl, imageUrl, metadataUploadUrl, metadataUrl } =
+        await presignedResponse.json();
+
+      // Convert base64 to blob for upload
+      const base64Data = base64Image.replace(/^data:image\/png;base64,/, "");
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const imageBlob = new Blob([byteArray], { type: "image/png" });
+
+      // Upload image directly to R2 using presigned URL
+      const imageUploadResponse = await fetch(imageUploadUrl, {
+        method: "PUT",
+        body: imageBlob,
+        headers: {
+          "Content-Type": "image/png",
+        },
+      });
+
+      if (!imageUploadResponse.ok) {
+        throw new Error("Failed to upload image to R2");
+      }
+
+      // Upload metadata directly to R2 using presigned URL
+      const metadataUploadResponse = await fetch(metadataUploadUrl, {
+        method: "PUT",
+        body: JSON.stringify(gameMetadata, null, 2),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!metadataUploadResponse.ok) {
+        throw new Error("Failed to upload metadata to R2");
+      }
+
+      console.log("Leaderboard uploaded to R2 successfully!");
+      console.log("Image URL:", imageUrl);
+      console.log("Metadata URL:", metadataUrl);
+
+      // Mint NFT with the metadata URL from R2
+      await mint(metadataUrl, getMintCost());
+    } catch (error) {
+      console.error("Error minting leaderboard NFT:", error);
+      alert("Failed to mint NFT. Please try again.");
+    }
+  };
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
   };
 
   const getRankIcon = (rank: string) => {
@@ -175,7 +361,10 @@ export const LeaderboardScreen = () => {
       </div>
 
       {/* Leaderboard List */}
-      <div className=" overflow-y-auto w-full pt-[16px]">
+      <div
+        id="leaderboard-container"
+        className=" overflow-y-auto w-full pt-[16px]"
+      >
         {userLoading || isLoading ? (
           <div className="w-full mx-auto flex items-center justify-center py-8">
             <div className="text-center">
@@ -203,24 +392,92 @@ export const LeaderboardScreen = () => {
             {leaderboardData.leaderboard.map((player) => (
               <div
                 key={`${player.rank}-${player.userName}`}
-                className="w-full h-[50px] bg-white/30 overflow-hidden border border-black rounded-[9px] flex items-center pr-4"
+                className={`w-full overflow-hidden border border-black rounded-[9px] flex flex-col ${
+                  player.isCurrentUser
+                    ? "bg-[#FFE254]/50 border-[#FFD700] border-2"
+                    : "bg-white/30"
+                }`}
               >
-                {getRankIcon(player.rank)}
-                <div className="flex items-center grow justify-between pl-2">
-                  <p className="font-sintony text-[12px] text-black tracking-[7.5%] ml-1">
-                    {player.userName}
-                  </p>
+                <div className="h-[50px] flex items-center pr-4">
+                  {getRankIcon(player.rank)}
+                  <div className="flex items-center grow justify-between pl-2">
+                    <p className="font-sintony text-[12px] text-black tracking-[7.5%] ml-1">
+                      {player.userName}
+                    </p>
 
-                  <p className="font-hartone text-[16px] text-black tracking-[7.5%] ml-auto">
-                    {player.score}
-                  </p>
+                    <p className="font-hartone text-[16px] text-black tracking-[7.5%] ml-auto">
+                      {player.score}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
+
+            {/* Show user's rank if they're not in the displayed leaderboard */}
+            {leaderboardData.userRanking &&
+              !leaderboardData.leaderboard.some(
+                (player) => player.isCurrentUser,
+              ) && (
+                <div className="w-full overflow-hidden border-2 border-[#FFD700] rounded-[9px] flex flex-col bg-[#FFE254]/50">
+                  <div className="h-[50px] flex items-center pr-4">
+                    {getRankIcon(leaderboardData.userRanking.rank.toString())}
+                    <div className="flex items-center grow justify-between pl-2">
+                      <p className="font-sintony text-[12px] text-black tracking-[7.5%] ml-1">
+                        {leaderboardData.userRanking.userName} (You)
+                      </p>
+
+                      <p className="font-hartone text-[16px] text-black tracking-[7.5%] ml-auto">
+                        {leaderboardData.userRanking.score}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Share/Mint buttons for current user */}
+            {leaderboardData.userRanking &&
+              (leaderboardData.leaderboard.some(
+                (player) => player.isCurrentUser,
+              ) ||
+                !leaderboardData.leaderboard.some(
+                  (player) => player.isCurrentUser,
+                )) && (
+                <div className="px-4 pb-3 flex gap-2">
+                  <button
+                    onClick={handleShare}
+                    className="flex-1 h-[36px] bg-[#FFE254] border border-black rounded-[20px] flex items-center justify-center font-hartone text-[14px] font-normal text-black hover:bg-[#FFD700] transition-colors"
+                    style={{
+                      boxShadow: "0px 2px 0px 0px rgba(0, 0, 0, 1)",
+                      letterSpacing: "7.5%",
+                    }}
+                  >
+                    <Share2 className="w-4 h-4 mr-1" />
+                    SHARE LEADERBOARD
+                  </button>
+                  <button
+                    onClick={handleMint}
+                    className="flex-1 h-[36px] bg-[#4ECDC4] border border-black rounded-[20px] flex items-center justify-center font-hartone text-[14px] font-normal text-black hover:bg-[#3FB8B0] transition-colors"
+                    style={{
+                      boxShadow: "0px 2px 0px 0px rgba(0, 0, 0, 1)",
+                      letterSpacing: "7.5%",
+                    }}
+                  >
+                    <Coins className="w-4 h-4 mr-1" />
+                    MINT LEADERBOARD
+                  </button>
+                </div>
+              )}
           </div>
         )}
       </div>
       <div className="h-4"></div>
+
+      <SuccessDialog
+        isOpen={showSuccessDialog}
+        onClose={handleSuccessDialogClose}
+        title="NFT Minted!"
+        description="Your leaderboard has been successfully minted as an NFT! You can view it in your wallet."
+      />
     </div>
   );
 };

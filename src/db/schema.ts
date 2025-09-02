@@ -34,12 +34,13 @@ export const dailyAttempts = pgTable(
       table.userId,
       table.date,
       table.gameType,
-      table.finalScore,
     ),
-    index("daily_attempts_user_id_idx").on(table.userId),
-    index("daily_attempts_date_idx").on(table.date),
-    index("daily_attempts_game_type_idx").on(table.gameType),
-    index("daily_attempts_final_score_idx").on(table.finalScore),
+    // OPTIMIZED INDEXES for better query performance
+    index("daily_attempts_user_date_idx").on(table.userId, table.date), // For user history queries
+    index("daily_attempts_user_created_idx").on(table.userId, table.createdAt), // For recent attempts
+    index("daily_attempts_date_game_idx").on(table.date, table.gameType), // For daily stats
+    index("daily_attempts_final_score_idx").on(table.finalScore), // For score-based queries
+    index("daily_attempts_streak_idx").on(table.streak), // For streak queries
   ],
 );
 
@@ -68,9 +69,20 @@ export const leaderboard = pgTable(
       table.date,
       table.gameType,
     ),
-    index("leaderboard_date_score_idx").on(table.date, table.score),
-    index("leaderboard_game_type_idx").on(table.gameType),
-    index("leaderboard_rank_idx").on(table.rank),
+    // OPTIMIZED INDEXES for better query performance
+    index("leaderboard_date_game_score_time_idx").on(
+      table.date,
+      table.gameType,
+      table.score,
+      table.timeTaken,
+    ), // Composite index for leaderboard queries
+    index("leaderboard_user_date_game_idx").on(
+      table.userId,
+      table.date,
+      table.gameType,
+    ), // For user ranking queries
+    index("leaderboard_date_idx").on(table.date), // For date-based queries
+    index("leaderboard_score_idx").on(table.score), // For score-based sorting
   ],
 );
 

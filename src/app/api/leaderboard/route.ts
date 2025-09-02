@@ -16,12 +16,24 @@ export async function GET(request: Request) {
       gameType || "all",
     );
 
+    const formattedLeaderboard = result.topScores.map((entry, index) => ({
+      rank: (index + 1).toString(),
+      userName: entry.userName,
+      score: entry.score,
+      isCurrentUser: result.userRanking?.userId === entry.userId,
+    }));
+
     return NextResponse.json({
       date: targetDate,
       gameType: gameType || "all",
-      leaderboard: result.topScores,
-      userRanking: result.userRanking,
-      total: result.total,
+      leaderboard: formattedLeaderboard,
+      userRanking: result.userRanking
+        ? {
+            rank: result.userRanking.rank,
+            score: result.userRanking.score,
+            userName: result.userRanking.userName,
+          }
+        : null,
     });
   } catch (error) {
     console.error("Error fetching leaderboard:", error);

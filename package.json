@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev -H 0.0.0.0 -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -13,6 +13,8 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.879.0",
+    "@aws-sdk/s3-request-presigner": "^3.879.0",
     "@b3dotfun/sdk": "^0.0.30",
     "@coinbase/onchainkit": "latest",
     "@farcaster/miniapp-sdk": "^0.1.9",

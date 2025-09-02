@@ -1,2 +1,1 @@
 ALTER TABLE "daily_attempts" DROP CONSTRAINT "daily_attempts_user_date_game_unique";--> statement-breakpoint
-ALTER TABLE "daily_attempts" ADD CONSTRAINT "daily_attempts_user_date_game_unique" UNIQUE("user_id","date","game_type","final_score");

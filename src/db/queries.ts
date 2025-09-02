@@ -5,9 +5,8 @@ import {
   type NewDailyAttempt,
   type NewLeaderboardEntry,
 } from "./schema";
-import { eq, desc, and, sql, asc } from "drizzle-orm";
+import { eq, desc, and, sql, asc, gt, lt, or } from "drizzle-orm";
 
-// Save daily attempt (simplified - no sessions)
 export async function saveDailyAttempt(
   userId: string,
   userName: string,
@@ -47,7 +46,6 @@ export async function saveDailyAttempt(
   return result[0].id;
 }
 
-// Submit to leaderboard (simplified)
 export async function submitToLeaderboard(
   userId: string,
   userName: string,
@@ -58,7 +56,6 @@ export async function submitToLeaderboard(
 ): Promise<{ updated: boolean }> {
   const leaderboardDate = date || new Date().toISOString().split("T")[0];
 
-  // Check if user already has an entry for this date and game type
   const existingEntry = await db
     .select({ score: leaderboard.score })
     .from(leaderboard)
@@ -93,7 +90,6 @@ export async function submitToLeaderboard(
     return { updated: false };
   }
 
-  // Create new leaderboard entry
   const newEntry: NewLeaderboardEntry = {
     userId,
     userName,
@@ -107,88 +103,124 @@ export async function submitToLeaderboard(
   return { updated: true };
 }
 
-// Get leaderboard for a specific date
 export async function getLeaderboard(
   date: string,
   userId?: string,
   gameType: string = "all",
 ) {
-  // Build where conditions
   const whereConditions = [eq(leaderboard.date, date)];
   if (gameType !== "all") {
     whereConditions.push(eq(leaderboard.gameType, gameType));
   }
 
-  // Get top 10 scores for the date and gameType
-  const topScores = await db
+  const whereClause =
+    whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
+
+  const topScoresQuery = db
     .select({
       userId: leaderboard.userId,
       userName: leaderboard.userName,
       score: leaderboard.score,
       gameType: leaderboard.gameType,
-      rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC, ${leaderboard.timeTaken} ASC)`.as(
-        "rank",
-      ),
+      timeTaken: leaderboard.timeTaken,
     })
     .from(leaderboard)
-    .where(
-      whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
-    )
+    .where(whereClause)
     .orderBy(desc(leaderboard.score), asc(leaderboard.timeTaken))
     .limit(10);
 
+  const topScores = await topScoresQuery;
+
   let userRanking = null;
-
-  // If userId provided, get user's ranking
   if (userId) {
-    const userWhereConditions = [
-      eq(leaderboard.date, date),
-      eq(leaderboard.userId, userId),
-    ];
+    const userInTop10 = topScores.find((entry) => entry.userId === userId);
 
-    if (gameType !== "all") {
-      userWhereConditions.push(eq(leaderboard.gameType, gameType));
-    }
+    if (userInTop10) {
+      const rank = topScores.findIndex((entry) => entry.userId === userId) + 1;
+      userRanking = {
+        userId: userInTop10.userId,
+        userName: userInTop10.userName,
+        score: userInTop10.score,
+        gameType: userInTop10.gameType,
+        rank,
+      };
+    } else {
+      const userRankingQuery = db
+        .select({
+          userId: leaderboard.userId,
+          userName: leaderboard.userName,
+          score: leaderboard.score,
+          gameType: leaderboard.gameType,
+          timeTaken: leaderboard.timeTaken,
+        })
+        .from(leaderboard)
+        .where(
+          gameType !== "all"
+            ? and(
+                eq(leaderboard.date, date),
+                eq(leaderboard.userId, userId),
+                eq(leaderboard.gameType, gameType),
+              )
+            : and(eq(leaderboard.date, date), eq(leaderboard.userId, userId)),
+        )
+        .limit(1);
 
-    const userRankQuery = await db
-      .select({
-        userId: leaderboard.userId,
-        userName: leaderboard.userName,
-        score: leaderboard.score,
-        gameType: leaderboard.gameType,
-        rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${leaderboard.score} DESC, ${leaderboard.timeTaken} ASC)`.as(
-          "rank",
-        ),
-      })
-      .from(leaderboard)
-      .where(and(...userWhereConditions))
-      .limit(1);
+      const userRankingResult = await userRankingQuery;
+      if (userRankingResult.length > 0) {
+        const userEntry = userRankingResult[0];
 
-    if (userRankQuery.length > 0) {
-      userRanking = userRankQuery[0];
+        // Calculate rank by counting how many players are better
+        const rankQuery = db
+          .select({
+            count: sql<number>`COUNT(*)`.as("count"),
+          })
+          .from(leaderboard)
+          .where(
+            gameType !== "all"
+              ? and(
+                  eq(leaderboard.date, date),
+                  eq(leaderboard.gameType, gameType),
+                  or(
+                    gt(leaderboard.score, userEntry.score),
+                    and(
+                      eq(leaderboard.score, userEntry.score),
+                      lt(leaderboard.timeTaken, userEntry.timeTaken),
+                    ),
+                  ),
+                )
+              : and(
+                  eq(leaderboard.date, date),
+                  or(
+                    gt(leaderboard.score, userEntry.score),
+                    and(
+                      eq(leaderboard.score, userEntry.score),
+                      lt(leaderboard.timeTaken, userEntry.timeTaken),
+                    ),
+                  ),
+                ),
+          );
+
+        const rankResult = await rankQuery;
+        const rank = Number(rankResult[0]?.count || 0) + 1;
+
+        userRanking = {
+          userId: userEntry.userId,
+          userName: userEntry.userName,
+          score: userEntry.score,
+          gameType: userEntry.gameType,
+          rank,
+        };
+      }
     }
   }
-
-  // Get total count for the date and gameType
-  const totalResult = await db
-    .select({
-      count: sql<number>`COUNT(*)`.as("count"),
-    })
-    .from(leaderboard)
-    .where(
-      whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0],
-    );
-
-  const total = totalResult[0]?.count || 0;
 
   return {
     topScores,
     userRanking,
-    total,
   };
 }
 
-// Get user's game history (simplified)
+// Get user's game history
 export async function getUserGameHistory(userId: string, limit: number = 20) {
   const history = await db
     .select({
@@ -199,28 +231,34 @@ export async function getUserGameHistory(userId: string, limit: number = 20) {
       capturedColor: dailyAttempts.capturedColor,
       similarity: dailyAttempts.similarity,
       date: dailyAttempts.date,
-      gameMode: dailyAttempts.gameType, // Always daily for this simplified version
+      gameMode: dailyAttempts.gameType,
     })
     .from(dailyAttempts)
     .where(eq(dailyAttempts.userId, userId))
     .orderBy(desc(dailyAttempts.createdAt))
     .limit(limit);
 
-  // Calculate light stats
-  const totalGames = history.length;
-  const bestScore =
-    totalGames > 0 ? Math.max(...history.map((h) => h.score)) : 0;
-  const averageScore =
-    totalGames > 0
-      ? history.reduce((sum, h) => sum + h.score, 0) / totalGames
-      : 0;
+  let totalGames = 0;
+  let bestScore = 0;
+  let totalScore = 0;
 
-  return {
-    history: history.map((h) => ({
+  const processedHistory = history.map((h) => {
+    totalGames++;
+    const score = h.score;
+    totalScore += score;
+    if (score > bestScore) bestScore = score;
+
+    return {
       ...h,
       similarity: parseFloat(h.similarity),
       timeTaken: parseFloat(h.timeTaken),
-    })),
+    };
+  });
+
+  const averageScore = totalGames > 0 ? totalScore / totalGames : 0;
+
+  return {
+    history: processedHistory,
     stats: {
       totalGames,
       bestScore,
@@ -229,7 +267,7 @@ export async function getUserGameHistory(userId: string, limit: number = 20) {
   };
 }
 
-// Get current streak for a user (optimized - just get latest streak value)
+// Get current streak for a user
 export async function getUserStreak(userId: string): Promise<number> {
   const latestAttempt = await db
     .select({
@@ -251,8 +289,6 @@ export async function getUserStreak(userId: string): Promise<number> {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-  // If the latest attempt was today or yesterday, return the streak
-  // Otherwise, the streak has been broken
   if (date === today || date === yesterdayStr) {
     return streak;
   }
