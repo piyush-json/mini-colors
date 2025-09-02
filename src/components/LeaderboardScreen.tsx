@@ -15,32 +15,18 @@ import { Rank1, Rank2, Rank3 } from "./icons";
 import sdk from "@farcaster/miniapp-sdk";
 import html2canvas from "html2canvas";
 import { getMintCost, useMintNFT } from "@/lib/nft-contract";
-import { generateLeaderboardShareUrl } from "@/lib/farcaster-share";
+import {
+  generateLeaderboardShareUrl,
+  type LeaderboardApiResponse,
+} from "@/lib/farcaster-share";
 import { SuccessDialog } from "./SuccessDialog";
 
-interface LeaderboardEntry {
-  rank: string;
-  userName: string;
-  score: number;
-  isCurrentUser: boolean;
-}
-
-interface UserRanking {
-  rank: number;
-  score: number;
-  userName: string;
-}
-
-interface LeaderboardData {
-  leaderboard: LeaderboardEntry[];
-  userRanking: UserRanking | null;
-  date: string;
-}
+// Using the typed interfaces from farcaster-share.ts
 
 export const LeaderboardScreen = () => {
   const { getUserId, getUserName, isLoading: userLoading } = useMiniKitUser();
   const [leaderboardData, setLeaderboardData] =
-    useState<LeaderboardData | null>(null);
+    useState<LeaderboardApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedGameType, setSelectedGameType] = useState<
@@ -78,7 +64,7 @@ export const LeaderboardScreen = () => {
         );
 
         if (response.ok) {
-          const data = (await response.json()) as LeaderboardData;
+          const data = (await response.json()) as LeaderboardApiResponse;
           if (!isCancelled) {
             setLeaderboardData(data);
           }

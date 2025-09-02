@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { decodeLeaderboardData } from "@/lib/farcaster-share";
 
 export const runtime = "edge";
 
@@ -16,16 +17,15 @@ export async function GET(request: Request) {
     }[] = [];
     if (dataParam) {
       try {
-        const parsedData = JSON.parse(decodeURIComponent(dataParam));
-        displayData = parsedData.map((entry: any) => ({
+        const decodedData = decodeLeaderboardData(dataParam);
+        displayData = decodedData.map((entry) => ({
           rank: parseInt(entry.rank),
           userName: entry.userName,
           score: entry.score,
-          isCurrentUser: entry.isCurrentUser || false,
+          isCurrentUser: entry.isCurrentUser,
         }));
       } catch (error) {
         console.error("Error parsing leaderboard data:", error);
-        // Fallback to empty data
         displayData = [];
       }
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getLeaderboard } from "@/db/queries";
+import type { LeaderboardApiResponse } from "@/lib/farcaster-share";
 
 export async function GET(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
       isCurrentUser: result.userRanking?.userId === entry.userId,
     }));
 
-    return NextResponse.json({
+    const response: LeaderboardApiResponse = {
       date: targetDate,
       gameType: gameType || "all",
       leaderboard: formattedLeaderboard,
@@ -34,7 +35,9 @@ export async function GET(request: Request) {
             userName: result.userRanking.userName,
           }
         : null,
-    });
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Error fetching leaderboard:", error);
     return NextResponse.json(

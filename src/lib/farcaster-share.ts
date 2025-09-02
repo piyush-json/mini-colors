@@ -15,6 +15,50 @@ export interface LeaderboardShareData {
   date?: string;
 }
 
+// Database entry from leaderboard table
+export interface LeaderboardEntry {
+  userId: string;
+  userName: string;
+  score: number;
+  gameType: string;
+  timeTaken: string;
+}
+
+// User ranking data
+export interface UserRanking {
+  userId: string;
+  userName: string;
+  score: number;
+  gameType: string;
+  rank: number;
+}
+
+// Database query result
+export interface LeaderboardQueryResult {
+  topScores: LeaderboardEntry[];
+  userRanking: UserRanking | null;
+}
+
+// Formatted leaderboard entry for display
+export interface FormattedLeaderboardEntry {
+  rank: string;
+  userName: string;
+  score: number;
+  isCurrentUser: boolean;
+}
+
+// API response structure
+export interface LeaderboardApiResponse {
+  date: string;
+  gameType: string;
+  leaderboard: FormattedLeaderboardEntry[];
+  userRanking: {
+    rank: number;
+    score: number;
+    userName: string;
+  } | null;
+}
+
 // Simple encoding to reduce length and make it less obvious
 function encodeShareData(data: ShareData): string {
   // Remove # from colors and convert to short format
@@ -58,56 +102,6 @@ function decodeShareData(encoded: string): ShareData | null {
   }
 }
 
-// Simple encoding for leaderboard data
-function encodeLeaderboardShareData(data: LeaderboardShareData): string {
-  const r = data.rank.toString(36); // base36 for rank
-  const s = data.score.toString(36); // base36 for score
-  const u = btoa(data.userName).replace(/[=+/]/g, ""); // base64 without padding chars
-  const g =
-    data.gameType === "all"
-      ? "a"
-      : data.gameType === "color-mixing"
-        ? "c"
-        : "f"; // game type
-  const d = data.date ? btoa(data.date).replace(/[=+/]/g, "") : ""; // date
-
-  return `${r}-${s}-${u}-${g}${d ? `-${d}` : ""}`;
-}
-
-// Decode leaderboard share data
-function decodeLeaderboardShareData(
-  encoded: string,
-): LeaderboardShareData | null {
-  try {
-    const parts = encoded.split("-");
-    if (parts.length < 4) return null;
-
-    const [r, s, u, g, d] = parts;
-
-    // Restore padding for base64 decode if needed
-    const paddedU = u + "=".repeat((4 - (u.length % 4)) % 4);
-    const paddedD = d ? d + "=".repeat((4 - (d.length % 4)) % 4) : "";
-
-    const gameType = g === "a" ? "all" : g === "c" ? "color-mixing" : "finding";
-
-    const result: LeaderboardShareData = {
-      rank: parseInt(r, 36),
-      score: parseInt(s, 36),
-      userName: atob(paddedU),
-      gameType,
-    };
-
-    if (d) {
-      result.date = atob(paddedD);
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Failed to decode leaderboard share data:", error);
-    return null;
-  }
-}
-
 export function generateFarcasterShareUrl(data: ShareData): string {
   const baseUrl =
     process.env.NEXT_PUBLIC_URL ||
@@ -120,23 +114,72 @@ export function generateFarcasterShareUrl(data: ShareData): string {
   return shareUrl;
 }
 
+// Custom encoding for leaderboard data to reduce URL length
+function encodeLeaderboardData(data: FormattedLeaderboardEntry[]): string {
+  // Format: userName|score;userName|score;... (rank is implicit from position)
+  // Current user is marked with a special prefix: @userName|score
+  // Truncate long usernames to max 20 chars
+  // Use base36 for numbers to make them shorter
+  return data
+    .map((entry) => {
+      const truncatedName =
+        entry.userName.length > 20
+          ? entry.userName.substring(0, 20)
+          : entry.userName;
+      const encodedName = btoa(truncatedName).replace(/[=+/]/g, ""); // base64 without padding
+      const currentUserPrefix = entry.isCurrentUser ? "@" : "";
+      return `${currentUserPrefix}${encodedName}|${entry.score.toString(36)}`;
+    })
+    .join(";");
+}
+
+// Custom decoding for leaderboard data
+export function decodeLeaderboardData(
+  encoded: string,
+): FormattedLeaderboardEntry[] {
+  try {
+    const entries = encoded.split(";");
+
+    return entries.map((entry, index) => {
+      // Check if this entry has the @ prefix (current user marker)
+      const isCurrentUser = entry.startsWith("@");
+      const cleanEntry = isCurrentUser ? entry.substring(1) : entry;
+
+      const [encodedName, score] = cleanEntry.split("|");
+
+      // Decode username
+      const paddedName =
+        encodedName + "=".repeat((4 - (encodedName.length % 4)) % 4);
+      const userName = atob(paddedName);
+
+      return {
+        rank: (index + 1).toString(),
+        userName,
+        score: parseInt(score, 36), // parse from base36
+        isCurrentUser,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to decode leaderboard data:", error);
+    return [];
+  }
+}
+
 export function generateLeaderboardShareUrl(
   data: LeaderboardShareData,
-  leaderboardData?: any,
+  leaderboardData?: LeaderboardApiResponse,
 ): string {
   const baseUrl =
     process.env.NEXT_PUBLIC_URL ||
     (typeof window !== "undefined" ? window.location.origin : "");
-  console.log("data", data);
-  // Create leaderboard data string
+
   let leaderboardParam = "";
   if (leaderboardData) {
     const allData = [...leaderboardData.leaderboard];
 
-    // Add user's row if not in top 10
     if (
       leaderboardData.userRanking &&
-      !leaderboardData.leaderboard.some((entry: any) => entry.isCurrentUser)
+      !leaderboardData.leaderboard.some((entry) => entry.isCurrentUser)
     ) {
       allData.push({
         rank: leaderboardData.userRanking.rank.toString(),
@@ -146,13 +189,11 @@ export function generateLeaderboardShareUrl(
       });
     }
 
-    // Encode all leaderboard data
-    leaderboardParam = encodeURIComponent(JSON.stringify(allData));
+    leaderboardParam = encodeLeaderboardData(allData);
   }
 
-  // Generate OG image URL with all leaderboard data
   const ogImageUrl = `${baseUrl}/api/og/leaderboard?data=${leaderboardParam}&gameType=${data.gameType}&date=${data.date}`;
-
+  console.log("ogImageUrl", ogImageUrl);
   return ogImageUrl;
 }
 
@@ -163,13 +204,4 @@ export function parseShareParams(
   if (!encoded) return null;
 
   return decodeShareData(encoded);
-}
-
-export function parseLeaderboardShareParams(
-  searchParams: URLSearchParams,
-): LeaderboardShareData | null {
-  const encoded = searchParams.get("d");
-  if (!encoded) return null;
-
-  return decodeLeaderboardShareData(encoded);
 }
