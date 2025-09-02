@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     // Generate today's color
     const title = "🎨 New Daily Color!";
     const body = "A new color challenge is waiting for you!";
-    const targetUrl = `${appUrl}/game`;
+    const targetUrl = `${appUrl}`;
 
     console.log(`Sending notifications`);
 

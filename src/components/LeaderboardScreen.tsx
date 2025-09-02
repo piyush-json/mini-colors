@@ -122,8 +122,7 @@ export const LeaderboardScreen = () => {
   };
 
   const handleMint = async () => {
-    if (!leaderboardData?.userRanking || !address) {
-      console.error("Please connect your wallet to mint an NFT.");
+    if (!leaderboardData?.userRanking) {
       return;
     }
 

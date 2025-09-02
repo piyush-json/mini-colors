@@ -89,10 +89,6 @@ export default function ResultsPage() {
     try {
       console.log("Mint button clicked");
       // CHECK IF user is connected
-      if (!address) {
-        alert("Please connect your wallet to mint an NFT.");
-        return;
-      }
 
       // Find the mintit div specifically
       const mintitElement = document.getElementById("mintit");
