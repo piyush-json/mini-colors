@@ -71,32 +71,6 @@ export async function GET(request: Request) {
             >
               Leaderboard
             </h1>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "8px 24px",
-                backgroundColor: "#FFFFFF",
-                border: "3px solid #000000",
-                borderRadius: "12px",
-                boxShadow: "0px 4px 0px 0px rgba(0, 0, 0, 1)",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "20px",
-                  color: "#666666",
-                  fontWeight: "600",
-                }}
-              >
-                {new Date(date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
           </div>
 
           {/* Leaderboard Container */}
@@ -372,6 +346,35 @@ export async function GET(request: Request) {
             style={{
               position: "absolute",
               bottom: "30px",
+              left: "30px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              padding: "8px 24px",
+              backgroundColor: "#FFFFFF",
+              border: "2px solid #000000",
+              borderRadius: "8px",
+              boxShadow: "0px 2px 0px 0px rgba(0, 0, 0, 1)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "20px",
+                color: "#666666",
+                fontWeight: "600",
+              }}
+            >
+              {new Date(date).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: "30px",
               right: "30px",
               display: "flex",
               alignItems: "center",
@@ -396,7 +399,7 @@ export async function GET(request: Request) {
         </div>
       ),
       {
-        width: 900,
+        width: 1200,
         height: 800,
         headers: {
           "Cache-Control": "public, max-age=600, s-maxage=600",

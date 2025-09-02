@@ -64,10 +64,10 @@ export async function generateMetadata({
           version: "next",
           imageUrl: ogImageUrl,
           button: {
-            title: `View ${currentUser.userName}'s Rank #${currentUser.rank}`,
+            title: `View ${currentUser.userName}'s Rank`,
             action: {
               type: "launch_frame",
-              name: "Color Game Leaderboard",
+              name: "Play Shade Leaderboard",
               url:
                 process.env.NEXT_PUBLIC_FURL ||
                 process.env.NEXT_PUBLIC_URL ||
