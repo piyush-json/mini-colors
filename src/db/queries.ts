@@ -2,10 +2,13 @@ import { db } from "./index";
 import {
   dailyAttempts,
   leaderboard,
+  notificationDetails,
   type NewDailyAttempt,
   type NewLeaderboardEntry,
+  type NewNotificationDetails,
 } from "./schema";
 import { eq, desc, and, sql, asc, gt, lt, or } from "drizzle-orm";
+import type { MiniAppNotificationDetails } from "@farcaster/miniapp-sdk";
 
 export async function saveDailyAttempt(
   userId: string,
@@ -294,4 +297,70 @@ export async function getUserStreak(userId: string): Promise<number> {
   }
 
   return 0;
+}
+
+// Notification details functions
+export async function getUserNotificationDetails(
+  fid: number,
+): Promise<MiniAppNotificationDetails | null> {
+  const result = await db
+    .select({ notificationDetails: notificationDetails.notificationDetails })
+    .from(notificationDetails)
+    .where(eq(notificationDetails.fid, fid))
+    .limit(1);
+
+  return result.length > 0
+    ? (result[0].notificationDetails as MiniAppNotificationDetails)
+    : null;
+}
+
+export async function setUserNotificationDetails(
+  fid: number,
+  notificationDetailsData: MiniAppNotificationDetails,
+): Promise<void> {
+  const existing = await db
+    .select({ id: notificationDetails.id })
+    .from(notificationDetails)
+    .where(eq(notificationDetails.fid, fid))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing record
+    await db
+      .update(notificationDetails)
+      .set({
+        notificationDetails: notificationDetailsData,
+        updatedAt: new Date(),
+      })
+      .where(eq(notificationDetails.fid, fid));
+  } else {
+    // Insert new record
+    const newNotificationDetails: NewNotificationDetails = {
+      fid,
+      notificationDetails: notificationDetailsData,
+    };
+    await db.insert(notificationDetails).values(newNotificationDetails);
+  }
+}
+
+export async function deleteUserNotificationDetails(
+  fid: number,
+): Promise<void> {
+  await db.delete(notificationDetails).where(eq(notificationDetails.fid, fid));
+}
+
+export async function getAllNotificationTokens(): Promise<
+  Array<{ fid: number; notificationDetails: MiniAppNotificationDetails }>
+> {
+  const result = await db
+    .select({
+      fid: notificationDetails.fid,
+      notificationDetails: notificationDetails.notificationDetails,
+    })
+    .from(notificationDetails);
+
+  return result.map((row) => ({
+    fid: row.fid,
+    notificationDetails: row.notificationDetails as MiniAppNotificationDetails,
+  }));
 }

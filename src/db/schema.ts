@@ -7,6 +7,7 @@ import {
   decimal,
   index,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 // Simplified daily attempts table - one attempt per user per day per game type
@@ -86,8 +87,25 @@ export const leaderboard = pgTable(
   ],
 );
 
+// Notification details table for storing user notification preferences
+export const notificationDetails = pgTable(
+  "notification_details",
+  {
+    id: serial("id").primaryKey(),
+    fid: integer("fid").notNull().unique(), // Farcaster ID
+    notificationDetails: jsonb("notification_details").notNull(), // MiniAppNotificationDetails JSON
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notification_details_fid_idx").on(table.fid), // For quick FID lookups
+  ],
+);
+
 // Export types for TypeScript
 export type DailyAttempt = typeof dailyAttempts.$inferSelect;
 export type NewDailyAttempt = typeof dailyAttempts.$inferInsert;
 export type LeaderboardEntry = typeof leaderboard.$inferSelect;
 export type NewLeaderboardEntry = typeof leaderboard.$inferInsert;
+export type NotificationDetails = typeof notificationDetails.$inferSelect;
+export type NewNotificationDetails = typeof notificationDetails.$inferInsert;

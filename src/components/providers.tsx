@@ -9,6 +9,7 @@ import { SocketProvider } from "./socket-provider";
 import { GameResultsProvider } from "@/lib/GameResultsContext";
 import { GameProvider } from "@/lib/GameContext";
 import { WalletProvider } from "./wallet-provider";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 const Child = ({ children }: { children: ReactNode }) => {
   const { setFrameReady, isFrameReady } = useMiniKit();
@@ -17,6 +18,12 @@ const Child = ({ children }: { children: ReactNode }) => {
     if (!isFrameReady) {
       setFrameReady();
     }
+    (async () => {
+      const ctx = await sdk.context;
+      if (!ctx.client.added) {
+        await sdk.actions.addMiniApp();
+      }
+    })();
   }, [setFrameReady, isFrameReady]);
   return <>{children}</>;
 };
