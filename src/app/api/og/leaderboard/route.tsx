@@ -398,6 +398,10 @@ export async function GET(request: Request) {
       {
         width: 900,
         height: 800,
+        headers: {
+          "Cache-Control": "public, max-age=600, s-maxage=600",
+          "Content-Type": "image/png",
+        },
       },
     );
   } catch (error) {

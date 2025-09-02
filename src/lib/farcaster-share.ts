@@ -192,9 +192,10 @@ export function generateLeaderboardShareUrl(
     leaderboardParam = encodeLeaderboardData(allData);
   }
 
-  const ogImageUrl = `${baseUrl}/api/og/leaderboard?data=${leaderboardParam}&gameType=${data.gameType}&date=${data.date}`;
-  console.log("ogImageUrl", ogImageUrl);
-  return ogImageUrl;
+  // Generate share URL that will have proper OG metadata
+  const shareUrl = `${baseUrl}/leaderboard-share?data=${leaderboardParam}&gameType=${data.gameType}&date=${data.date}`;
+  console.log("shareUrl", shareUrl);
+  return shareUrl;
 }
 
 export function parseShareParams(
