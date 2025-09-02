@@ -1,4 +1,9 @@
-import { useAccount, useSendTransaction, useSwitchChain } from "wagmi";
+import {
+  useAccount,
+  useConnect,
+  useSendTransaction,
+  useSwitchChain,
+} from "wagmi";
 import { encodeFunctionData } from "viem";
 import {} from "viem/zksync";
 
@@ -22,11 +27,24 @@ export function useMintNFT({
   onSuccess?: () => void;
   onError?: () => void;
 }) {
-  const { address, chainId } = useAccount();
+  const { address, chainId, isConnected } = useAccount();
   const { sendTransaction, isPending } = useSendTransaction();
+  const {
+    connectAsync: connect,
+    isPending: isConnecting,
+    connectors,
+  } = useConnect();
   const { switchChain } = useSwitchChain();
 
   const mint = async (tokenURI: string, value: bigint) => {
+    if (!isConnected) {
+      try {
+        await connect({ connector: connectors[0] });
+      } catch (error) {
+        console.error("Error connecting to wallet:", error);
+        return;
+      }
+    }
     if (chainId !== CONTRACT_CHAIN_ID) {
       await switchChain({ chainId: CONTRACT_CHAIN_ID });
     }
@@ -52,7 +70,7 @@ export function useMintNFT({
     );
   };
 
-  return { mint, isPending, address };
+  return { mint, isPending, address, isConnecting };
 }
 
 export function getMintCost(): bigint {
