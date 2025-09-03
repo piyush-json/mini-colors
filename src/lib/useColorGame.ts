@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { ColorSDK, ColorMatch, GameState } from "./color-sdk";
 import { useMiniKitUser } from "./useMiniKitUser";
 import Webcam from "react-webcam";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 export interface UseColorGameReturn {
   // Core game state
@@ -301,7 +302,7 @@ export const useColorGame = (
               const userId = getUserId();
               const userName = getUserName();
 
-              await fetch("/api/game/attempt", {
+              await sdk.quickAuth.fetch("/api/game/attempt", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",

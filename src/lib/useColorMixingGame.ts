@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ColorMixingSDK, ColorMixingState, ColorRGB } from "./mix-sdk";
 import { useMiniKitUser } from "./useMiniKitUser";
+import { sdk as MAsdk } from "@farcaster/miniapp-sdk";
 
 // Debounce utility function
 function useDebounce<T extends any[]>(
@@ -145,7 +146,7 @@ export const useColorMixingGame = (options: UseColorMixingGameOptions = {}) => {
         const targetColorHex = `#${attempt.targetColor.r.toString(16).padStart(2, "0")}${attempt.targetColor.g.toString(16).padStart(2, "0")}${attempt.targetColor.b.toString(16).padStart(2, "0")}`;
         const mixedColorHex = `#${attempt.mixedColor.r.toString(16).padStart(2, "0")}${attempt.mixedColor.g.toString(16).padStart(2, "0")}${attempt.mixedColor.b.toString(16).padStart(2, "0")}`;
 
-        await fetch("/api/game/attempt", {
+        await MAsdk.quickAuth.fetch("/api/game/attempt", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

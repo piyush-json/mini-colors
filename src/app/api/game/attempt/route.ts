@@ -4,9 +4,15 @@ import { dailyAttempts } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { saveDailyAttempt, submitToLeaderboard } from "@/db/queries";
 import { calculateFinalScore } from "@/lib/color-mixing-utils";
+import { authenticateRequest } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       userId,
