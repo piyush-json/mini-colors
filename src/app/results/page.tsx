@@ -6,7 +6,7 @@ import { ShareMintScreen } from "@/components/ShareMintScreen";
 import { SuccessDialog } from "@/components/SuccessDialog";
 import { useGameResults } from "@/lib/GameResultsContext";
 // import { useComposeCast } from "@coinbase/onchainkit/minikit";
-import sdk from "@farcaster/miniapp-sdk";
+import { sdk } from "@farcaster/miniapp-sdk";
 import html2canvas from "html2canvas";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
 import { getMintCost, useMintNFT } from "@/lib/nft-contract";
