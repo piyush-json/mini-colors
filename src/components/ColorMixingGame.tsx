@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useColorMixingGame } from "@/lib/useColorMixingGame";
 import { useGameContext } from "@/lib/GameContext";
 import { Slider } from "@/components/ui/slider";
+import { useColorCanvas } from "@/lib/hooks/useColorCanvas";
 
 interface ColorMixingGameProps {
   targetColor?: string | null;
@@ -18,6 +19,7 @@ interface ColorMixingGameProps {
   disabled?: boolean;
   mode?: "daily" | "practice";
   timeLimit?: number; // Time limit in seconds
+  useCanvas?: boolean; // Use canvas version to prevent cheating
 }
 
 interface ColorSliderProps {
@@ -64,6 +66,7 @@ export const ColorMixingGame = ({
   disabled = false,
   mode = "practice",
   timeLimit,
+  useCanvas = false, // Keep original DOM version
 }: ColorMixingGameProps = {}) => {
   const {
     state,
@@ -79,6 +82,12 @@ export const ColorMixingGame = ({
     targetColor: targetColor || undefined,
     onScoreSubmit,
     mode,
+  });
+
+  const { canvasRef } = useColorCanvas({
+    targetColorHex,
+    mixedColorHex,
+    targetColor,
   });
 
   // Local state for immediate visual feedback
@@ -126,14 +135,11 @@ export const ColorMixingGame = ({
       <div className="flex flex-col items-center gap-[55px] w-full  mx-auto">
         {/* Target Color Display with Loading */}
         <div className="flex flex-col items-center gap-[17px] w-full">
-          <div className="relative w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center bg-[#f0f0f0]">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
-              <span className="font-sintony text-sm text-black">
-                Loading...
-              </span>
-            </div>
-          </div>
+          <canvas
+            ref={canvasRef}
+            className="w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)]"
+            style={{ width: "100%", height: "68px" }}
+          />
           <div className="flex justify-between items-center w-[287px]">
             <div className="px-1">
               <div className="text-[14px] font-sintony font-bold leading-[16px] tracking-[-1%] text-black">
@@ -176,29 +182,12 @@ export const ColorMixingGame = ({
     <div className="flex flex-col items-center gap-12 w-full  mx-auto">
       {/* Target and Your Color Display */}
       <div className="flex flex-col items-center gap-[17px] w-full">
-        {/* Color Display */}
-        <div
-          className="relative w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
-          style={{ backgroundColor: targetColorHex }}
-        >
-          {!targetColor && (
-            <div className="absolute inset-0 bg-[#f0f0f0] flex items-center justify-center rounded-[12px]">
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
-                <span className="font-sintony text-sm text-black">
-                  Loading...
-                </span>
-              </div>
-            </div>
-          )}
-          {/* Right half showing mixed color */}
-          {targetColor && (
-            <div
-              className="absolute right-0 top-0 w-1/2 h-full   border border-black rounded-r-[12px] "
-              style={{ backgroundColor: mixedColorHex }}
-            />
-          )}
-        </div>
+        {/* Color Display - Canvas */}
+        <canvas
+          ref={canvasRef}
+          className="w-full h-[68px] border border-black rounded-[12px] shadow-[0px_6px_0px_0px_rgba(0,0,0,1)]"
+          style={{ width: "100%", height: "68px" }}
+        />
 
         {/* Labels */}
         <div className="flex justify-between items-center w-[287px]">
