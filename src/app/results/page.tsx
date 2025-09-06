@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShareMintScreen } from "@/components/ShareMintScreen";
 import { SuccessDialog } from "@/components/SuccessDialog";
 import { useGameResults } from "@/lib/GameResultsContext";
-// import { useComposeCast } from "@coinbase/onchainkit/minikit";
+import { useComposeCast } from "@coinbase/onchainkit/minikit";
 import { sdk } from "@farcaster/miniapp-sdk";
 import html2canvas from "html2canvas";
 import { useMiniKitUser } from "@/lib/useMiniKitUser";
@@ -17,7 +17,7 @@ import { rgbOrHslToHex } from "@/lib/color-mixing-utils";
 export default function ResultsPage() {
   const router = useRouter();
   const { results, clearResults, setGameMode } = useGameResults();
-  // const { composeCastAsync: composeCast } = useComposeCast();
+  const { composeCast } = useComposeCast();
   const { getUserName } = useMiniKitUser();
   const {
     mint,
@@ -74,14 +74,14 @@ export default function ResultsPage() {
       };
       const shareUrl = generateFarcasterShareUrl(shareData);
       console.log("Share URL:", shareUrl);
-      await sdk.actions.composeCast({
-        text: `Just scored ${results.similarity}%! 🎨 Can you beat my score?`,
+      composeCast({
+        text: `Just scored ${results.similarity}% in @playshadedotfun! 🎨 Can you beat my score?`,
         embeds: [shareUrl],
       });
     } catch (error) {
       console.error("Error taking screenshot:", error);
-      await sdk.actions.composeCast({
-        text: `Just scored ${results?.similarity}%! 🎨 Can you beat my score?`,
+      composeCast({
+        text: `Just scored ${results?.similarity}% in @playshadedotfun! 🎨 Can you beat my score?`,
       });
     }
   };

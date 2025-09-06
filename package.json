@@ -17,7 +17,7 @@
     "@aws-sdk/s3-request-presigner": "^3.879.0",
     "@b3dotfun/sdk": "^0.0.30",
     "@coinbase/onchainkit": "latest",
-    "@farcaster/miniapp-sdk": "^0.1.7",
+    "@farcaster/miniapp-sdk": "^0.1.10",
     "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@farcaster/quick-auth": "^0.0.7",
     "@radix-ui/react-dialog": "^1.1.15",
