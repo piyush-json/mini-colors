@@ -75,13 +75,13 @@ export default function ResultsPage() {
       const shareUrl = generateFarcasterShareUrl(shareData);
       console.log("Share URL:", shareUrl);
       await sdk.actions.composeCast({
-        text: `Just scored ${results.similarity}% in @playshadedotfun! 🎨 Can you beat my score?`,
+        text: `Just scored ${results.similarity}%! 🎨 Can you beat my score?`,
         embeds: [shareUrl],
       });
     } catch (error) {
       console.error("Error taking screenshot:", error);
       await sdk.actions.composeCast({
-        text: `Just scored ${results?.similarity}% in @playshadedotfun! 🎨 Can you beat my score?`,
+        text: `Just scored ${results?.similarity}%! 🎨 Can you beat my score?`,
       });
     }
   };
